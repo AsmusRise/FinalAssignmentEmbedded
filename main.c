@@ -44,6 +44,8 @@ static void setupHardware(void)
 QueueHandle_t adc_queue;
 QueueHandle_t adc_to_uart_queue;
 SemaphoreHandle_t xSemaphore = NULL;
+QueueHandle_t button_queue;
+
 
 int main(void)
 {
@@ -51,6 +53,8 @@ int main(void)
     //create a queue cabable of holding 1 INT16 U 
     adc_queue = xQueueCreate(1, sizeof(INT16U));
     adc_to_uart_queue = xQueueCreate(1, sizeof(INT16U));
+    button_queue = xQueueCreate(1, sizeof(INT16U));
+    
     //create the mutex
     xSemaphore = xSemaphoreCreateMutex();
 
