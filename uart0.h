@@ -65,6 +65,8 @@ extern void uart0_puts( INT8U* );
 
 extern void uart0_puts_selfmade(INT8U*);
 
+extern void uart0_get_string(INT8U *str, INT16U max_length);
+
 
 
 extern void uart0_init( INT32U, INT8U, INT8U, INT8U );

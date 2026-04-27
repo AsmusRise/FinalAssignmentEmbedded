@@ -45,7 +45,13 @@ static void setupHardware(void)
 QueueHandle_t adc_queue;
 QueueHandle_t adc_to_uart_queue;
 SemaphoreHandle_t xSemaphore = NULL;
+
+QueueHandle_t button_queue;
+QueueHandle_t greenQueue;
+QueueHandle_t yellowQueue;
+QueueHandle_t redQueue;
 QueueHandle_t key_queue;
+
 
 
 int main(void)
@@ -54,15 +60,20 @@ int main(void)
     //create a queue cabable of holding 1 INT16 U 
     adc_queue = xQueueCreate(1, sizeof(INT16U));
     adc_to_uart_queue = xQueueCreate(1, sizeof(INT16U));
+
+    button_queue = xQueueCreate(1, sizeof(INT16U));
+    greenQueue = xQueueCreate(1, sizeof(INT16U));
+    yellowQueue = xQueueCreate(1, sizeof(INT16U));
+    redQueue = xQueueCreate(1, sizeof(INT16U));
     key_queue = xQueueCreate(1, sizeof(INT8U));
-    
+
     //create the mutex
     xSemaphore = xSemaphoreCreateMutex();
 
     xTaskCreate( status_led_task, "Status_led", USERTASK_STACK_SIZE, NULL, LOW_PRIO, NULL );
     xTaskCreate( adc_task, "ADC", USERTASK_STACK_SIZE, NULL, LOW_PRIO, NULL );
+    
     xTaskCreate( red_led_task, "red", USERTASK_STACK_SIZE, NULL, LOW_PRIO, NULL);
-
     xTaskCreate( green_led_task, "green", USERTASK_STACK_SIZE, NULL, LOW_PRIO, NULL);
     xTaskCreate( yellow_led_task, "yellow", USERTASK_STACK_SIZE, NULL, LOW_PRIO, NULL);
     xTaskCreate( key_task, "key", USERTASK_STACK_SIZE, NULL, LOW_PRIO, NULL);

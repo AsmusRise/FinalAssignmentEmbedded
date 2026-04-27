@@ -195,8 +195,26 @@ extern void uart0_puts_selfmade (INT8U *str)
 }
 
 
+extern void uart0_get_string(INT8U *str, INT16U max_length)
+{
+  INT16U i = 0;
+  INT8U ch;
 
+  while(i < max_length -1)
+  { 
+    while(!uart0_rx_rdy()); // wait till uarts ready
+    ch = uart0_getc();
 
+    if(ch == '\r' || ch == '\n')
+    {
+      str[i] = '\n';
+      break;
+    }
+    str[i++] = ch;
+    
+    }
+  str[i] = '\0';
+}
 
 extern void uart0_init( INT32U baud_rate, INT8U databits, INT8U stopbits, INT8U parity )
 /*****************************************************************************
@@ -231,7 +249,7 @@ extern void uart0_init( INT32U baud_rate, INT8U databits, INT8U stopbits, INT8U 
 
   uart0_fifos_disable();
 
-  UART0_CTL_R  |= (UART_CTL_UARTEN | UART_CTL_TXE );  // Enable UART
+  UART0_CTL_R  |= (UART_CTL_UARTEN | UART_CTL_TXE | UART_CTL_RXE);  // Enable UART
 }
 
 /****************************** End Of Module *******************************/
