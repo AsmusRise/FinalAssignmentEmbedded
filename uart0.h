@@ -60,14 +60,10 @@ extern void uart0_puts( INT8U* );
 /*****************************************************************************
 *   Input    : Pointer to null-terminated string
 *   Output   : -
-*   Function : Send string to uart0 TX followed by CR+LF
+*   Function : Send string + CR+LF via TX queue
 ******************************************************************************/
 
 extern void uart0_puts_selfmade(INT8U*);
-
-extern void uart0_get_string(INT8U *str, INT16U max_length);
-
-
 
 extern void uart0_init( INT32U, INT8U, INT8U, INT8U );
 /*****************************************************************************
@@ -76,11 +72,17 @@ extern void uart0_init( INT32U, INT8U, INT8U, INT8U );
 *   Function : Initialize uart 0
 ******************************************************************************/
 
+void uart_tx_task( void *pvParameters );
+/*****************************************************************************
+*   Function : FreeRTOS task - sends bytes from uart_tx_queue to hardware
+******************************************************************************/
 
+void uart_rx_task( void *pvParameters );
+/*****************************************************************************
+*   Function : FreeRTOS task - polls hardware RX, pushes bytes to uart_rx_queue
+******************************************************************************/
 
-void uartTask(void *pvParameters);
-
+void uartTask( void *pvParameters );
 
 /****************************** End Of Module *******************************/
 #endif
-

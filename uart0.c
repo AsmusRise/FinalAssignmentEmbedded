@@ -31,6 +31,8 @@
 
 
 extern QueueHandle_t adc_to_uart_queue;
+extern QueueHandle_t uart_tx_queue;
+extern QueueHandle_t uart_rx_queue;
 extern SemaphoreHandle_t xSemaphore;
 /*****************************    Defines    *******************************/
 
@@ -164,57 +166,41 @@ extern void uart0_putc( INT8U ch )
   UART0_DR_R = ch;
 }
 
+/*********************  Queue-based TX/RX helpers  *************************/
+
 extern void uart0_puts( INT8U *str )
 /*****************************************************************************
-*   Function : See module specification (.h-file).
+*   Function : Send string + CR+LF via TX queue (non-blocking for caller).
 *****************************************************************************/
 {
-  while( *str ) // '\0'
+  while( *str )
   {
-    while( !uart0_tx_rdy() );  // Wait until TX buffer is ready
-    uart0_putc( *str++ );
+    xQueueSend( uart_tx_queue, str, portMAX_DELAY );
+    str++;
   }
-  while( !uart0_tx_rdy() );
-  uart0_putc( '\r' );          // Carriage return
-  while( !uart0_tx_rdy() );
-  uart0_putc( '\n' );          // Newline
+  INT8U cr = '\r';
+  INT8U lf = '\n';
+  xQueueSend( uart_tx_queue, &cr, portMAX_DELAY );
+  xQueueSend( uart_tx_queue, &lf, portMAX_DELAY );
 }
 
-extern void uart0_puts_selfmade (INT8U *str)
+extern void uart0_puts_selfmade( INT8U *str )
+/*****************************************************************************
+*   Function : Send string + CR+LF via TX queue (non-blocking for caller).
+*****************************************************************************/
 {
   int length = strlen((const char*)str);
   int i;
-  for(i = 0; i<length; i++){
-    while( !uart0_tx_rdy());
-    uart0_putc(str[i]);
+  for(i = 0; i < length; i++)
+  {
+    xQueueSend( uart_tx_queue, &str[i], portMAX_DELAY );
   }
-  while(!uart0_tx_rdy());
-  uart0_putc('\r');
-  while(!uart0_tx_rdy());
-  uart0_putc('\n');
+  INT8U cr = '\r';
+  INT8U lf = '\n';
+  xQueueSend( uart_tx_queue, &cr, portMAX_DELAY );
+  xQueueSend( uart_tx_queue, &lf, portMAX_DELAY );
 }
 
-
-extern void uart0_get_string(INT8U *str, INT16U max_length)
-{
-  INT16U i = 0;
-  INT8U ch;
-
-  while(i < max_length -1)
-  { 
-    while(!uart0_rx_rdy()); // wait till uarts ready
-    ch = uart0_getc();
-
-    if(ch == '\r' || ch == '\n')
-    {
-      str[i] = '\n';
-      break;
-    }
-    str[i++] = ch;
-    
-    }
-  str[i] = '\0';
-}
 
 extern void uart0_init( INT32U baud_rate, INT8U databits, INT8U stopbits, INT8U parity )
 /*****************************************************************************
@@ -255,31 +241,66 @@ extern void uart0_init( INT32U baud_rate, INT8U databits, INT8U stopbits, INT8U 
 /****************************** End Of Module *******************************/
 
 
+/****************************  FreeRTOS Tasks  *****************************/
 
-
-
-//create task down here.
-
-void uartTask(void *pvParameters)
+void uart_tx_task( void *pvParameters )
+/*****************************************************************************
+*   Input    : pvParameters (unused)
+*   Output   : -
+*   Function : FreeRTOS task - blocks on uart_tx_queue, sends each byte
+*              to hardware when TX is ready.
+*****************************************************************************/
 {
-	//declare the received value from the queue:
-  INT16U received_pot_value = 0;
-	char myString[32];
+  INT8U ch;
 
-	while(1)
-	{
-	  if ( xQueueReceive(adc_to_uart_queue, &received_pot_value, portMAX_DELAY))
+  while(1)
+  {
+    if( xQueueReceive( uart_tx_queue, &ch, portMAX_DELAY ) == pdTRUE )
     {
-      sprintf(myString, "Val: %d", received_pot_value);
-      uart0_puts_selfmade((INT8U*)myString);
+      while( !uart0_tx_rdy() );  // brief busy-wait for hardware (microseconds)
+      uart0_putc( ch );
     }
   }
 }
 
+void uart_rx_task( void *pvParameters )
+/*****************************************************************************
+*   Input    : pvParameters (unused)
+*   Output   : -
+*   Function : FreeRTOS task - polls UART RX at 10ms intervals, pushes
+*              received bytes into uart_rx_queue for other tasks to consume.
+*****************************************************************************/
+{
+  INT8U ch;
 
+  while(1)
+  {
+    while( uart0_rx_rdy() )
+    {
+      ch = uart0_getc();
+      xQueueSend( uart_rx_queue, &ch, 0 );  // drop if queue full
+    }
+    vTaskDelay( 10 / portTICK_RATE_MS );
+  }
+}
 
+void uartTask( void *pvParameters )
+/*****************************************************************************
+*   Input    : pvParameters (unused)
+*   Output   : -
+*   Function : FreeRTOS task - reads ADC values from queue and prints
+*              them over UART. (Debug/demo task)
+*****************************************************************************/
+{
+  INT16U received_pot_value = 0;
+  char myString[32];
 
-
-
-
-
+  while(1)
+  {
+    if( xQueueReceive( adc_to_uart_queue, &received_pot_value, portMAX_DELAY ))
+    {
+      sprintf( myString, "Val: %d", received_pot_value );
+      uart0_puts_selfmade( (INT8U*)myString );
+    }
+  }
+}
