@@ -133,11 +133,11 @@ INT8U select_button(void)
 void button_1_Task(void *pvParameters)
 {
 	//implement while loop
-	static INT8U pressence = CUP_MISSING;
-	static INT8U pressing = BUTTON_NOT_PRESSED
+	static INT8U pressence = BS_CUP_MISSING;
+	static INT8U pressing = BUTTON_NOT_PRESSED;
 	while(1)
 	{
-		pressing = BUTTON_NOT_PRESSED
+		pressing = BUTTON_NOT_PRESSED;
 		if(button_pushed_1()) // make this into a task that puts the state into a que. 
 		{	
 			if(pressing = BUTTON_NOT_PRESSED)
