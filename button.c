@@ -151,7 +151,7 @@ void button_1_Task(void *pvParameters)
 					pressence = BS_CUP_MISSING;
 				}
 			}
-			pressing = BUTTON_PRESSED
+			pressing = BUTTON_PRESSED;
 		}
 		xQueueSend(button_1_queue, pressence, 0); //function to be used if we want 
 
