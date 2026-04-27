@@ -166,8 +166,9 @@ void button_2_Task(void *pvParameters)
 	while(1)
 	{	
 		if(pressence)
+		{
 		xQueueSend(button_2_queue, button_pushed_2(), 0);
-
+		} 
 		//delay task
 		vTaskDelay(100 / portTICK_RATE_MS);
 	}

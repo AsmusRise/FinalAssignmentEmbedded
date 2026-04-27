@@ -54,14 +54,14 @@ int main(void)
     adc_queue = xQueueCreate(1, sizeof(INT16U));
     adc_to_uart_queue = xQueueCreate(1, sizeof(INT16U));
     button_queue = xQueueCreate(1, sizeof(INT16U));
-    
+
     //create the mutex
     xSemaphore = xSemaphoreCreateMutex();
 
     xTaskCreate( status_led_task, "Status_led", USERTASK_STACK_SIZE, NULL, LOW_PRIO, NULL );
     xTaskCreate( adc_task, "ADC", USERTASK_STACK_SIZE, NULL, LOW_PRIO, NULL );
+    
     xTaskCreate( red_led_task, "red", USERTASK_STACK_SIZE, NULL, LOW_PRIO, NULL);
-
     xTaskCreate( green_led_task, "green", USERTASK_STACK_SIZE, NULL, LOW_PRIO, NULL);
     xTaskCreate( yellow_led_task, "yellow", USERTASK_STACK_SIZE, NULL, LOW_PRIO, NULL);
 
