@@ -34,6 +34,9 @@
 extern QueueHandle_t adc_to_uart_queue;
 extern QueueHandle_t adc_queue;
 extern SemaphoreHandle_t xSemaphore;
+extern QueueHandle_t greenQueue;
+extern QueueHandle_t yellowQueue;
+extern QueueHandle_t redQueue;
 
 /*****************************    Defines    *******************************/
 #define PF0		0		// Bit 0
@@ -143,6 +146,55 @@ void green_led_task(void *pvParameters)
       vTaskDelay(10 / portTICK_RATE_MS);
     }
   }
+}
+
+void led_task(void *pvParameters)
+{
+  INT16U greenON_RX = 0;
+  INT16U yellowON_RX = 0;
+  INT16U redON_RX = 0;
+  while(1)  
+  {
+  //GPIO_PORTF_DATA_R ^= 0x08; // green led
+  //GPIO_PORTF_DATA_R ^= 0x04; // yellow led
+  //GPIO_PORTF_DATA_R ^= 0x02; // red led
+    if(xQueuePeek(greenQueue, &greenON_RX, 0)) // 0 instead of ( TickType_t ) 10 ) as i dont want to do anything if nothing is in the queue.
+    {
+      if(greenON_RX == 0){
+        GPIO_PORTF_DATA_R &= ~0x08;
+      }
+      else
+      {
+        GPIO_PORTF_DATA_R |= 0x08;
+      }
+    }
+
+    if(xQueuePeek(yellowQueue, &yellowON_RX, 0)) // 0 instead of ( TickType_t ) 10 ) as i dont want to do anything if nothing is in the queue.
+    {
+      if(yellowON_RX == 0){
+        GPIO_PORTF_DATA_R &= ~0x04;
+      }
+      else
+      {
+        GPIO_PORTF_DATA_R |= 0x04;
+      }
+    }
+
+    if(xQueuePeek(redQueue, &redON_RX, 0)) // 0 instead of ( TickType_t ) 10 ) as i dont want to do anything if nothing is in the queue.
+    {
+      if(redON_RX == 0){
+        GPIO_PORTF_DATA_R &= ~0x02;
+      }
+      else
+      {
+        GPIO_PORTF_DATA_R |= 0x02;
+      }
+    }
+
+    vTaskDelay(10 / portTICK_RATE_MS);
+  }
+
+  
 }
 /****************************** End Of Module *******************************/
 
