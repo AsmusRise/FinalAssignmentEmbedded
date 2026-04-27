@@ -88,20 +88,20 @@ void key_init(void)
 {
   volatile INT32U dummy;
 
-  SYSCTL_RCGC2_R |= SYSCTL_RCGC2_GPIOA | SYSCTL_RCGC2_GPIOE;
-  dummy = SYSCTL_RCGC2_R;
+  SYSCTL_RCGC2_R |= SYSCTL_RCGC2_GPIOA | SYSCTL_RCGC2_GPIOE; // Configure clock for port A and E
+  dummy = SYSCTL_RCGC2_R; // dummy read
 
-  GPIO_PORTA_DIR_R |= 0x1C;
-  GPIO_PORTA_DEN_R |= 0x1C;
-  GPIO_PORTA_AFSEL_R &= ~0x1C;
-  GPIO_PORTA_AMSEL_R &= ~0x1C;
-  GPIO_PORTA_PCTL_R &= 0xFFF000FF;
+  GPIO_PORTA_DIR_R |= 0x1C; // Set PA2, PA3 and PA4 as digital out (keypad collumns)
+  GPIO_PORTA_DEN_R |= 0x1C; // Enable digital functions on PA2, PA3 and PA4
+  GPIO_PORTA_AFSEL_R &= ~0x1C; // Disable alternate peripherals
+  GPIO_PORTA_AMSEL_R &= ~0x1C; // Disable analog mode
+  GPIO_PORTA_PCTL_R &= 0xFFF000FF; // Clear mux fields in PCTL
 
-  GPIO_PORTE_DIR_R &= ~0x0F;
-  GPIO_PORTE_DEN_R |= 0x0F;
-  GPIO_PORTE_AFSEL_R &= ~0x0F;
-  GPIO_PORTE_AMSEL_R &= ~0x0F;
-  GPIO_PORTE_PCTL_R &= 0xFFFF0000;
+  GPIO_PORTE_DIR_R &= ~0x0F; // Set PE0, PE1, PE2, and PE3 as inputs (keypad rows)
+  GPIO_PORTE_DEN_R |= 0x0F; // Enable digital functions
+  GPIO_PORTE_AFSEL_R &= ~0x0F; // Disable alternate peripherals
+  GPIO_PORTE_AMSEL_R &= ~0x0F; // Disable analog mode
+  GPIO_PORTE_PCTL_R &= 0xFFFF0000; // Clear mux fields in PCTL
 }
 
 BOOLEAN get_keyboard(INT8U *pch)
