@@ -6,14 +6,7 @@
 *
 * PROJECT....: EMP
 *
-* DESCRIPTION: See module specification file (.h-file).
-*
-* Change Log:
-*****************************************************************************
-* Date    Id    Change
-* YYMMDD
-* --------------------
-* 150321  MoH   Module created.
+* DESCRIPTION: 3x4 keypad task implementation using FreeRTOS queues.
 *
 *****************************************************************************/
 
@@ -21,86 +14,127 @@
 #include <stdint.h>
 #include "tm4c123gh6pm.h"
 #include "emp_type.h"
-#include "tmodel.h"
+#include "FreeRTOS.h"
+#include "task.h"
+#include "queue.h"
 
-INT8U row( INT8U y )
+#include "key.h"
+
+/*****************************   Variables   *******************************/
+extern QueueHandle_t key_queue;
+
+/*****************************   Functions   *******************************/
+static INT8U row(INT8U y)
 {
-  INT8U result = 0;
-
-  switch( y )
+  switch(y)
   {
-    case 0x01: result = 1; break;
-    case 0x02: result = 2; break;
-    case 0x04: result = 3; break;
-    case 0x08: result = 4; break;
+    case 0x01: return 1;
+    case 0x02: return 2;
+    case 0x04: return 3;
+    case 0x08: return 4;
+    default:   return 0;
   }
-  return( result );
 }
 
-INT8U key_catch( x, y )
-INT8U x, y;
+static INT8U key_catch(INT8U x, INT8U y)
 {
-  const INT8U matrix[3][4] = {{'*','7','4','1'},
-                              {'0','8','5','2'},
-                              {'#','9','6','3'}};
+  static const INT8U matrix[3][4] = {
+    {'*', '7', '4', '1'},
+    {'0', '8', '5', '2'},
+    {'#', '9', '6', '3'}
+  };
 
-  return( matrix[x-1][y-1] );
+  return matrix[x - 1][y - 1];
 }
 
-BOOLEAN get_keyboard( INT8U *pch )
+static BOOLEAN scan_column(INT8U column, INT8U *pch)
 {
-  return( get_queue( Q_KEY, pch, WAIT_FOREVER ));
-}
+  INT8U y;
 
-BOOLEAN check_column(INT8U x)
-{
-    INT8U y = GPIO_PORTE_DATA_R & 0x0F;             // Save the values of the 4 bits for the rows
-    if( y )                                         // If one of them are set...
-    {                                               // ...we first find the row number with the function row()
-        INT8U ch = key_catch( x, row(y) );          // Now that we have the row and column we look up the corresponding character using the function key_catch
-        put_queue( Q_KEY, ch, 1 );                  // Put the character in a queue so it can be used by another task
-        return 1;
-    }
-    return 0;
-}
+  GPIO_PORTA_DATA_R &= 0xE3; /* Clear PA2, PA3 and PA4 */
 
-extern void key_task(INT8U my_id, INT8U my_state, INT8U event, INT8U data)
-/*****************************************************************************
-*   Input    :
-*   Output   :
-*   Function :
-******************************************************************************/
-{
-  switch(my_state)
-  {
-  case 0:
-    GPIO_PORTA_DATA_R &= 0xE3;          // Clear the 3 bits for the columns
-    GPIO_PORTA_DATA_R |= 0x10;          // Set the bit for column 1
-    if (check_column(1))                // Check all the rows for column 1, using the function check_column
-    {                                   // If a button press is registered we go to next state so the press is only registered once
-        set_state(1);
-        break;
-    }
-    GPIO_PORTA_DATA_R &= 0xE3;          // Repeat the above for the two other columns
+  if(column == 1)
+    GPIO_PORTA_DATA_R |= 0x10;
+  else if(column == 2)
     GPIO_PORTA_DATA_R |= 0x08;
-    if (check_column(2))
-    {
-        set_state(1);
-        break;
-    }
-    GPIO_PORTA_DATA_R &= 0xE3;
+  else
     GPIO_PORTA_DATA_R |= 0x04;
-    if (check_column(3))
+
+  y = GPIO_PORTE_DATA_R & 0x0F;
+  if(y)
+  {
+    *pch = key_catch(column, row(y));
+    return 1;
+  }
+
+  return 0;
+}
+
+static BOOLEAN scan_keypad(INT8U *pch)
+{
+  if(scan_column(1, pch))
+    return 1;
+
+  if(scan_column(2, pch))
+    return 1;
+
+  if(scan_column(3, pch))
+    return 1;
+
+  return 0;
+}
+
+void key_init(void)
+{
+  volatile INT32U dummy;
+
+  SYSCTL_RCGC2_R |= SYSCTL_RCGC2_GPIOA | SYSCTL_RCGC2_GPIOE;
+  dummy = SYSCTL_RCGC2_R;
+
+  GPIO_PORTA_DIR_R |= 0x1C;
+  GPIO_PORTA_DEN_R |= 0x1C;
+  GPIO_PORTA_AFSEL_R &= ~0x1C;
+  GPIO_PORTA_AMSEL_R &= ~0x1C;
+  GPIO_PORTA_PCTL_R &= 0xFFF000FF;
+
+  GPIO_PORTE_DIR_R &= ~0x0F;
+  GPIO_PORTE_DEN_R |= 0x0F;
+  GPIO_PORTE_AFSEL_R &= ~0x0F;
+  GPIO_PORTE_AMSEL_R &= ~0x0F;
+  GPIO_PORTE_PCTL_R &= 0xFFFF0000;
+}
+
+BOOLEAN get_keyboard(INT8U *pch)
+{
+  return (xQueueReceive(key_queue, pch, portMAX_DELAY) == pdTRUE);
+}
+
+void key_task(void *pvParameters)
+{
+  INT8U ch;
+  BOOLEAN wait_for_release = 0;
+
+  (void)pvParameters;
+  key_init();
+
+  while(1)
+  {
+    if(!wait_for_release)
     {
-        set_state(1);
-        break;
+      if(scan_keypad(&ch))
+      {
+        xQueueOverwrite(key_queue, &ch);
+        wait_for_release = 1;
+      }
     }
-    break;
-  case 1:
-    if( !(GPIO_PORTE_DATA_R & 0x0F) )   // We stay here until the button is released so a button press is not counted more than once
+    else
     {
-      set_state( 0 );
+      if(!scan_keypad(&ch))
+      {
+        wait_for_release = 0;
+      }
     }
-    break;
+
+    vTaskDelay(20 / portTICK_RATE_MS);
   }
 }
