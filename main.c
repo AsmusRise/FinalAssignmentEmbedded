@@ -45,7 +45,8 @@ QueueHandle_t adc_queue;
 QueueHandle_t adc_to_uart_queue;
 SemaphoreHandle_t xSemaphore = NULL;
 
-QueueHandle_t button_queue;
+QueueHandle_t button_queue1;
+QueueHandle_t button_queue2;
 QueueHandle_t greenQueue;
 QueueHandle_t yellowQueue;
 QueueHandle_t redQueue;
@@ -89,6 +90,10 @@ int main(void)
     xTaskCreate( lcd_task, "LCD", USERTASK_STACK_SIZE, NULL, LOW_PRIO, NULL );
     xTaskCreate( uart_tx_task, "UART_TX", USERTASK_STACK_SIZE, NULL, LOW_PRIO, NULL );
     xTaskCreate( uart_rx_task, "UART_RX", USERTASK_STACK_SIZE, NULL, LOW_PRIO, NULL );
+
+    //button tasks
+    xTaskCreate( button_1_Task, "Button1", USERTASK_STACK_SIZE, NULL, LOW_PRIO, NULL );
+    xTaskCreate( button_2_Task, "Button2", USERTASK_STACK_SIZE, NULL, LOW_PRIO, NULL );
 
     // tasks for the coffebrewer
     xTaskCreate( timer_task, "timer", USERTASK_STACK_SIZE, NULL, LOW_PRIO, NULL );

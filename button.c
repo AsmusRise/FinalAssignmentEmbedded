@@ -23,11 +23,7 @@
 
 
 /*****************************    Defines    *******************************/
-#define BS_CUP_MISSING      0
-#define BS_CUP_PRESENT      1
 
-#define BUTTON_NOT_PRESSED 	0
-#define BUTTON_PRESSED		1
 
 /*****************************   Constants   *******************************/
 
@@ -43,6 +39,8 @@ INT8U button_pushed_1()
 {
   return( !(GPIO_PORTF_DATA_R & 0x10) );  // SW at PF4
 }
+
+
 
 INT8U button_pushed_2()
 /*****************************************************************************
@@ -133,30 +131,19 @@ INT8U select_button(void)
 void button_1_Task(void *pvParameters)
 {
 	//implement while loop
-	static INT8U pressence = BS_CUP_MISSING;
-	static INT8U pressing = BUTTON_NOT_PRESSED;
 	while(1)
 	{
-		pressing = BUTTON_NOT_PRESSED;
 		if(button_pushed_1()) // make this into a task that puts the state into a que. 
 		{	
-			if(pressing = BUTTON_NOT_PRESSED)
+			//debounce
+			vTaskDelay(10 / portTICK_RATE_MS);
+			if(button_pushed_1())
 			{
-				if(pressence = BS_CUP_MISSING)
-				{
-					pressence = BS_CUP_PRESENT;
-				}
-				else if(pressence = BS_CUP_PRESENT)
-				{
-					pressence = BS_CUP_MISSING;
-				}
+				xQueueSend(button_queue1, 1, 0);
 			}
-			pressing = BUTTON_PRESSED;
 		}
-		xQueueSend(button_1_queue, pressence, 0); //function to be used if we want 
-
 		//delay task
-		vTaskDelay(100 / portTICK_RATE_MS);
+		vTaskDelay(10 / portTICK_RATE_MS);
 	}
 }
 
@@ -165,12 +152,17 @@ void button_2_Task(void *pvParameters)
 	//implement while loop
 	while(1)
 	{	
-		if(pressence)
+		if(button_pushed_2())
 		{
-		xQueueSend(button_2_queue, button_pushed_2(), 0);
+			//debounce
+			vTaskDelay(10 / portTICK_RATE_MS);
+			if(button_pushed_2())
+			{
+				xQueueSend(button_queue2, 1, 0);
+			}
 		} 
 		//delay task
-		vTaskDelay(100 / portTICK_RATE_MS);
+		vTaskDelay(10 / portTICK_RATE_MS);
 	}
 }
 
