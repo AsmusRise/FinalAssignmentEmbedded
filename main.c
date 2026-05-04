@@ -90,6 +90,10 @@ int main(void)
     xTaskCreate( uart_tx_task, "UART_TX", USERTASK_STACK_SIZE, NULL, LOW_PRIO, NULL );
     xTaskCreate( uart_rx_task, "UART_RX", USERTASK_STACK_SIZE, NULL, LOW_PRIO, NULL );
 
+    // tasks for the coffebrewer
+    xTaskCreate( timer_task, "timer", USERTASK_STACK_SIZE, NULL, LOW_PRIO, NULL );
+    xTaskCreate( coffebrewer_task, "coffebrewer", USERTASK_STACK_SIZE, NULL, LOW_PRIO, NULL );
+
     vTaskStartScheduler();
 	return 0;
 }
