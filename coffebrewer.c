@@ -30,7 +30,23 @@ INT8U keylist[20];
 INT64U cardNumber = 0;
 INT16U sum = 0;
 INT16U pincode = 0;
+INT16U cashInserted = 0;
+INT16U paymentType = 0; //2 for card, 1 for cash
 
+
+void give_change(){
+    while(cashInserted > 0) //one coin at a time by flashing green led
+    {
+        timer1 = LED_BLINK;
+        waitForTimer(TIMER1);
+        xQueueSend(greenQueue, &(INT16U){LEDON}, portMAX_DELAY);
+        timer1 = LED_BLINK;
+        waitForTimer(TIMER1);
+        xQueueSend(greenQueue, &(INT16U){LEDOFF}, portMAX_DELAY);
+        cashInserted -= 1;
+        //update display with remaining change
+    }
+}
 
 void timer_task(void *pvParameters)
 {
@@ -51,6 +67,31 @@ void timer_task(void *pvParameters)
             timer3--; 
         }
         vTaskDelayUntil(&xLastWakeTime, 10 / portTICK_RATE_MS);
+    }
+}
+
+void waitForTimer(INT8U timerID)
+{
+    switch(timerID)
+    {
+        case 1:
+            while(timer1 > 0)
+            {
+                vTaskDelay(10 / portTICK_RATE_MS);
+            }
+            break;
+        case 2:
+            while(timer2 > 0)
+            {
+                vTaskDelay(10 / portTICK_RATE_MS);
+            }
+            break;
+        case 3:
+            while(timer3 > 0)
+            {
+                vTaskDelay(10 / portTICK_RATE_MS);
+            }
+            break;
     }
 }
 
@@ -76,6 +117,17 @@ void coffebrewer_task(void *pvParameters)
         switch (brewerState)
         {
         case PRODUCT_SELECT:
+            //Reset all variables to default
+            selectedProduct = NO_SELECTION;
+            paymentType = NO_SELECTION;
+            cardNumber = 0;
+            sum = 0;
+            cashInserted = 0;
+            for(int i = 0; i < keyCounter; i++)
+            {
+                keylist[i] = 0;
+            }
+            keyCounter = 0;
             wr_str_LCD("Select Product:");
             move_LCD(0,1);
             wr_str_LCD("1:Espresso 2:Latte 3:Filter Coffee");
@@ -154,6 +206,7 @@ void coffebrewer_task(void *pvParameters)
                     if(selectConfirm())
                     {
                         brewerState = CARD;
+                        paymentType = CARD;
                     }
                     break;
                 case '2':
@@ -161,6 +214,7 @@ void coffebrewer_task(void *pvParameters)
                     if(selectConfirm())
                     {
                         brewerState = CASH;
+                        paymentType = CASH;
                     }
                     break;
                 default:
@@ -313,14 +367,38 @@ void coffebrewer_task(void *pvParameters)
             break;
         case CASH:
             //update display
-            if(xQueueReceive(key_queue,  &key_buffer, portMAX_DELAY) == pdTRUE)
-            {
-                //cash inserted, update display
-                if(selectConfirm())
+            //get input from encoder
+                if(xQueueReceive(encoder_queue, &key_buffer, 20) == pdTRUE) //dont wait indef cause be also need to keep track of confirm/cancel input from keypad
                 {
-                    brewerState = CUP_PRESENCE;
+                    //update display with current sum
+                    if(key_buffer == 1)
+                    {
+                        cashInserted += 20;
+                    } else if(key_buffer == 2)
+                    {
+                      cashInserted += 5;
+                    }
                 }
-            }
+                if(xQueueReceive(key_queue,  &key_buffer, 20) == pdTRUE)
+                {
+                    if(key_buffer == '#') //we are done with payment
+                    {
+                        switch (PRODUCT_SELECT))
+                        {
+                        case constant expression:
+                            /* code */
+                            break;
+                        
+                        default:
+                            break;
+                        }
+                    } else if(key_buffer == '*') //cancel payment and return change
+                    {
+                        give_change();
+                        brewerState = PRODUCT_SELECT;
+                        //update display
+                    }
+                }  
             break;
         case CUP_PRESENCE:
             /* code */

@@ -32,6 +32,19 @@
 #define LATTE 7
 #define FILTER_COFFEE 8
 
+//timer defines
+#define TIMER1 1
+#define TIMER2 2
+#define TIMER3 3
+#define LED_BLINK 25 //25*10 ms = 250 ms
+
+
+#define LEDON 1
+#define LEDOFF 0
+
+#define CASH 1
+#define CARD 2
+
 
 
 /*****************************   Constants   *******************************/
