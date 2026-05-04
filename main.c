@@ -18,6 +18,8 @@
 #include "key.h"
 #include "lcd.h"
 #include "uart0.h"
+#include "button.h"
+#include "coffebrewer.h"
 
 #define USERTASK_STACK_SIZE configMINIMAL_STACK_SIZE
 #define IDLE_PRIO 0
@@ -64,7 +66,8 @@ int main(void)
     adc_queue = xQueueCreate(1, sizeof(INT16U));
     adc_to_uart_queue = xQueueCreate(1, sizeof(INT16U));
 
-    button_queue = xQueueCreate(1, sizeof(INT16U));
+    button_queue1 = xQueueCreate(1, sizeof(INT16U));
+    button_queue2 = xQueueCreate(1, sizeof(INT16U));
     greenQueue = xQueueCreate(1, sizeof(INT16U));
     yellowQueue = xQueueCreate(1, sizeof(INT16U));
     redQueue = xQueueCreate(1, sizeof(INT16U));

@@ -12,11 +12,12 @@
 /***************************** Include files *******************************/
 #include <stdint.h>
 #include "tm4c123gh6pm.h"
-#include "standardTypes.h"
+#include "emp_type.h"
 #include "button.h"
 
 //freeRTOS 
 #include "FreeRTOS.h"
+#include "task.h"
 #include "queue.h"
 #include "semphr.h"
 
@@ -39,7 +40,17 @@ INT8U button_pushed_1()
 *   Function : Check if the button (SW1 on PF4) is pushed
 ******************************************************************************/
 {
-  return( !(GPIO_PORTF_DATA_R & 0x10) );  // SW at PF4
+  return( !(GPIO_PORTF_DATA_R & 0x10) );  // SW1 at PF4
+}
+
+INT8U button_pushed_2()
+/*****************************************************************************
+*   Input    : -
+*   Output   : TRUE if button is pushed, FALSE otherwise
+*   Function : Check if the button (SW2 on PF0) is pushed
+******************************************************************************/
+{
+  return( !(GPIO_PORTF_DATA_R & 0x01) );  // SW2 at PF0
 }
 
 
@@ -55,7 +66,7 @@ void button_1_Task(void *pvParameters)
 			vTaskDelay(10 / portTICK_RATE_MS);
 			if(button_pushed_1())
 			{
-				xQueueSend(button_queue1, 1, 0);
+				xQueueSend(button_queue1, &(INT8U){1}, 0);
 			}
 		}
 		//delay task
@@ -74,7 +85,7 @@ void button_2_Task(void *pvParameters)
 			vTaskDelay(10 / portTICK_RATE_MS);
 			if(button_pushed_2())
 			{
-				xQueueSend(button_queue2, 1, 0);
+				xQueueSend(button_queue2, &(INT8U){1}, 0);
 			}
 		} 
 		//delay task

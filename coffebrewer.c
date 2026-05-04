@@ -1,4 +1,6 @@
 #include "coffebrewer.h"
+#include "FreeRTOS.h"
+#include "task.h"
 #include "queue.h"
 #include "emp_type.h"
 #include "status_led.h"
@@ -8,7 +10,8 @@
 #include "lcd.h"
 #include "uart0.h"
 
-extern QueueHandle_t button_queue;
+extern QueueHandle_t button_queue1;
+extern QueueHandle_t button_queue2;
 extern QueueHandle_t greenQueue;
 extern QueueHandle_t yellowQueue;
 extern QueueHandle_t redQueue;
@@ -18,6 +21,7 @@ extern QueueHandle_t uart_tx_queue;
 extern QueueHandle_t uart_rx_queue;
 extern QueueHandle_t adc_queue;
 extern QueueHandle_t adc_to_uart_queue;
+extern QueueHandle_t encoder_queue;
 
 INT16U brewerState = PRODUCT_SELECT;
 INT16U selectedProduct = 0;
@@ -26,7 +30,7 @@ INT16U timer2 = 0;
 INT16U timer3 = 0;
 INT8U key_buffer = 0;
 INT8U keyCounter = 0;
-INT8U keylist[20]; 
+INT8U keylist[20];
 INT64U cardNumber = 0;
 INT16U sum = 0;
 INT16U pincode = 0;
@@ -60,11 +64,11 @@ void timer_task(void *pvParameters) //needs semaphores... (everywhere)
         }
         if(timer2 > 0)
         {
-            timer2--; 
+            timer2--;
         }
         if(timer3 > 0)
         {
-            timer3--; 
+            timer3--;
         }
         vTaskDelayUntil(&xLastWakeTime, 10 / portTICK_RATE_MS);
     }
@@ -135,7 +139,7 @@ void coffebrewer_task(void *pvParameters)
 
             if(xQueueReceive(key_queue,  &key_buffer, portMAX_DELAY) == pdTRUE)
             {
-            
+
                 //button press received, state is now set to the button that was pressed
                 switch (key_buffer)
                 {
@@ -199,7 +203,7 @@ void coffebrewer_task(void *pvParameters)
 
             if(xQueueReceive(key_queue,  &key_buffer, portMAX_DELAY) == pdTRUE)
             {
-            
+
                 //button press received, state is now set to the button that was pressed
                 switch (key_buffer)
                 {
@@ -207,16 +211,16 @@ void coffebrewer_task(void *pvParameters)
                    //update display
                     if(selectConfirm())
                     {
-                        brewerState = CARD;
-                        paymentType = CARD;
+                        brewerState = CARD_ENTRY;
+                        paymentType = PAY_CARD;
                     }
                     break;
                 case '2':
                     //update display
                     if(selectConfirm())
                     {
-                        brewerState = CASH;
-                        paymentType = CASH;
+                        brewerState = CASH_ENTRY;
+                        paymentType = PAY_CASH;
                     }
                     break;
                 default:
@@ -225,7 +229,7 @@ void coffebrewer_task(void *pvParameters)
                 }
             }
             break;
-        case CARD:
+        case CARD_ENTRY:
             //update display
             xQueueReset(key_queue);
             clr_LCD();
@@ -282,7 +286,7 @@ void coffebrewer_task(void *pvParameters)
                             keyCounter = 0;
                             //back to card number input, update display
                         }
-           
+
                     }
                     //update display
                     break;
@@ -364,12 +368,12 @@ void coffebrewer_task(void *pvParameters)
                     //update display
                     break;
                 default:
-                    
+
                     break;
                 }
             }
             break;
-        case CASH:
+        case CASH_ENTRY:
             //update display
             xQueueReset(key_queue);
             xQueueReset(encoder_queue);
@@ -399,7 +403,7 @@ void coffebrewer_task(void *pvParameters)
                                 give_change();
                                 brewerState = CUP_PRESENCE;
                             } else {
-                                //not enough cash inserted, update display accordingly 
+                                //not enough cash inserted, update display accordingly
                                 //maybe we let them continue to insert cash instead of going back to product selection?
                             }
                             break;
@@ -411,7 +415,7 @@ void coffebrewer_task(void *pvParameters)
                                 give_change();
                                 brewerState =  CUP_PRESENCE;
                             } else {
-                                //not enough cash inserted, update display accordingly 
+                                //not enough cash inserted, update display accordingly
                                 //maybe we let them continue to insert cash instead of going back to product selection?
                             }
                             break;
@@ -427,24 +431,24 @@ void coffebrewer_task(void *pvParameters)
                         brewerState = PRODUCT_SELECT;
                         //update display
                     }
-                }  
+                }
             break;
         case CUP_PRESENCE:
             //update display
-            xQueueReset(button1_queue);
+            xQueueReset(button_queue1);
             //wait for signal from "cup sensor" (aka button input)
-            if(xQueueReceive(button1_queue, &key_buffer, portMAX_DELAY) == pdTRUE){ //just check if its been clicked
+            if(xQueueReceive(button_queue1, &key_buffer, portMAX_DELAY) == pdTRUE){ //just check if its been clicked
                 brewerState = READY_TO_BREW;
             }
             break;
         case READY_TO_BREW:
             //update display (waiting for start input)
-            xQueueReset(button2_queue);
-            if(xQueueReceive(button2_queue,  &key_buffer, portMAX_DELAY) == pdTRUE)
+            xQueueReset(button_queue2);
+            if(xQueueReceive(button_queue2,  &key_buffer, portMAX_DELAY) == pdTRUE)
             {
                 brewerState = selectedProduct; //move to brewing state based on selected product
             }
-
+            break;
         case ESPRESSO_BREWING:
             //update display with brewing status
             //Grind coffee for 7.5 s, indicated by the yellow LED, then brew coffee for 14 s, indicated by red LED
@@ -456,11 +460,11 @@ void coffebrewer_task(void *pvParameters)
                 {
                     waitForTimer(TIMER2);
                      xQueueSend(yellowQueue, &(INT16U){LEDON}, portMAX_DELAY);
-                 }   
+                 }
                 timer2 = LED_BLINK;
                  if(timer1 > GRIND_TIME - LED_BLINK) //only continue blinking if we have enough time left
                 {                    waitForTimer(TIMER2);
-                 }   
+                 }
                 xQueueSend(yellowQueue, &(INT16U){LEDOFF}, portMAX_DELAY);
             }
             timer1 = BREW_TIME; //14 seconds
@@ -471,12 +475,12 @@ void coffebrewer_task(void *pvParameters)
                 {
                     waitForTimer(TIMER2);
                      xQueueSend(redQueue, &(INT16U){LEDON}, portMAX_DELAY);
-                 }   
+                 }
                 timer2 = LED_BLINK;
                  if(timer1 > BREW_TIME - LED_BLINK) //only continue blinking if we have enough time left
                 {
                     waitForTimer(TIMER2);
-                 }   
+                 }
                 xQueueSend(redQueue, &(INT16U){LEDOFF}, portMAX_DELAY); //always turn off red led after brew time even if we stopped blinking before
             }
             //update display with brew complete
@@ -495,11 +499,11 @@ void coffebrewer_task(void *pvParameters)
                 {
                     waitForTimer(TIMER2);
                      xQueueSend(yellowQueue, &(INT16U){LEDON}, portMAX_DELAY);
-                 }   
+                 }
                 timer2 = LED_BLINK;
                  if(timer1 > GRIND_TIME - LED_BLINK) //only continue blinking if we have enough time left
                 {                    waitForTimer(TIMER2);
-                 }   
+                 }
                 xQueueSend(yellowQueue, &(INT16U){LEDOFF}, portMAX_DELAY);
             }
             timer1 = BREW_TIME; //14 seconds
@@ -510,12 +514,12 @@ void coffebrewer_task(void *pvParameters)
                 {
                     waitForTimer(TIMER2);
                      xQueueSend(redQueue, &(INT16U){LEDON}, portMAX_DELAY);
-                 }   
+                 }
                 timer2 = LED_BLINK;
                  if(timer1 > BREW_TIME - LED_BLINK) //only continue blinking if we have enough time left
                 {
                     waitForTimer(TIMER2);
-                 }   
+                 }
                 xQueueSend(redQueue, &(INT16U){LEDOFF}, portMAX_DELAY); //always turn off red led after brew time even if we stopped blinking before
             }
             timer1 = LATTE_FROTH_TIME; //6.2 seconds
@@ -526,12 +530,12 @@ void coffebrewer_task(void *pvParameters)
                 {
                     waitForTimer(TIMER2);
                      xQueueSend(greenQueue, &(INT16U){LEDON}, portMAX_DELAY);
-                 }   
+                 }
                 timer2 = LED_BLINK;
                  if(timer1 > LATTE_FROTH_TIME - LED_BLINK) //only continue blinking if we have enough time left
                 {
                     waitForTimer(TIMER2);
-                 }   
+                 }
                 xQueueSend(greenQueue, &(INT16U){LEDOFF}, portMAX_DELAY); //always turn off green led after froth time even if we stopped blinking before
             }
             //update display with brew complete
@@ -553,14 +557,14 @@ void coffebrewer_task(void *pvParameters)
             break;
         case TAKE_CUP:
             //update display to take cup
-            xQueueReset(button1_queue);
+            xQueueReset(button_queue1);
             //add logging
             //wait for signal from "cup sensor" (aka button input) that cup has been taken
-            if(xQueueReceive(button1_queue, &key_buffer, portMAX_DELAY) == pdTRUE){ //just check if its been clicked
+            if(xQueueReceive(button_queue1, &key_buffer, portMAX_DELAY) == pdTRUE){ //just check if its been clicked
                 brewerState = PRODUCT_SELECT; //back to start for next customer
             }
             break;
-        
+
         default:
             //error code, should never happen
             break;
