@@ -106,7 +106,10 @@ void encoder_task(void *pvParameters)
     while(1)
     {
         position = encoder_read();
-        xQueueOverwrite(encoder_queue, &position);
+        if(position != 0)
+        {
+            xQueueOverwrite(encoder_queue, &position);
+        }
         vTaskDelay(5 / portTICK_RATE_MS);
     }
 }
