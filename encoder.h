@@ -15,8 +15,8 @@
 #include "emp_type.h"
 
 void   init_encoder(void);
-INT32S encoder_read(void);   /* returns accumulated position (ticks) */
-BOOLEAN get_encoder(INT32S *position);
+INT8U encoder_read(void);   /* returns step delta: 0=no change, 1=right, 2=left */
+BOOLEAN get_encoder(INT8U *position);
 void encoder_task(void *pvParameters);
 
 #endif /* ENCODER_H_ */

@@ -65,7 +65,7 @@ void init_encoder(void)
     enc_step_accum = 0;
 }
 
-INT32S encoder_read(void)
+INT8U encoder_read(void)
 {
     INT8U raw = GPIO_PORTA_DATA_R;
     INT8U new_state = 0;
@@ -85,20 +85,20 @@ INT32S encoder_read(void)
     if(enc_step_accum <= -ENC_COUNTS_PER_STEP)
     {
         enc_step_accum = 0;
-        return -1;
+        return 2;
     }
 
     return 0;
 }
 
-BOOLEAN get_encoder(INT32S *position)
+BOOLEAN get_encoder(INT8U *position)
 {
     return (xQueueReceive(encoder_queue, position, portMAX_DELAY) == pdTRUE);
 }
 
 void encoder_task(void *pvParameters)
 {
-    INT32S position;
+    INT8U position;
 
     (void)pvParameters;
     init_encoder();

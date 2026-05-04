@@ -68,7 +68,7 @@ int main(void)
     yellowQueue = xQueueCreate(1, sizeof(INT16U));
     redQueue = xQueueCreate(1, sizeof(INT16U));
     key_queue = xQueueCreate(1, sizeof(INT8U));
-    encoder_queue = xQueueCreate(1, sizeof(INT32S));
+    encoder_queue = xQueueCreate(1, sizeof(INT8U));
     
     lcd_queue = xQueueCreate(128, sizeof(INT8U));
     uart_tx_queue = xQueueCreate(128, sizeof(INT8U));
