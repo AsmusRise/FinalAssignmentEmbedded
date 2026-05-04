@@ -14,6 +14,7 @@
 #include "status_led.h"
 #include "color_led.h"
 #include "adc.h"
+#include "encoder.h"
 #include "key.h"
 
 #include "uart0.h"
@@ -46,6 +47,7 @@ QueueHandle_t adc_queue;
 QueueHandle_t adc_to_uart_queue;
 SemaphoreHandle_t xSemaphore = NULL;
 QueueHandle_t key_queue;
+QueueHandle_t encoder_queue;
 
 
 int main(void)
@@ -55,6 +57,7 @@ int main(void)
     adc_queue = xQueueCreate(1, sizeof(INT16U));
     adc_to_uart_queue = xQueueCreate(1, sizeof(INT16U));
     key_queue = xQueueCreate(1, sizeof(INT8U));
+    encoder_queue = xQueueCreate(1, sizeof(INT32S));
     
     //create the mutex
     xSemaphore = xSemaphoreCreateMutex();
@@ -65,6 +68,7 @@ int main(void)
 
     xTaskCreate( green_led_task, "green", USERTASK_STACK_SIZE, NULL, LOW_PRIO, NULL);
     xTaskCreate( yellow_led_task, "yellow", USERTASK_STACK_SIZE, NULL, LOW_PRIO, NULL);
+    xTaskCreate( encoder_task, "encoder", USERTASK_STACK_SIZE, NULL, LOW_PRIO, NULL);
     xTaskCreate( key_task, "key", USERTASK_STACK_SIZE, NULL, LOW_PRIO, NULL);
 
     xTaskCreate(uartTask, "uartADC", 256, NULL, LOW_PRIO, NULL );
