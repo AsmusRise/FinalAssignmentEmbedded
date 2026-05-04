@@ -79,13 +79,13 @@ INT8U encoder_read(void)
     if(enc_step_accum >= ENC_COUNTS_PER_STEP)
     {
         enc_step_accum = 0;
-        return 1;
+        return 1; // Clockwise
     }
 
     if(enc_step_accum <= -ENC_COUNTS_PER_STEP)
     {
         enc_step_accum = 0;
-        return 2;
+        return 2; // Counter clockwise
     }
 
     return 0;
