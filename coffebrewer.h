@@ -21,22 +21,27 @@
 #define PINCODE 3
 #define CASH 4
 #define CUP_PRESENCE 5
-#define ESPRESSO_BREWING 6
-#define LATTE_BREWING 7
-#define FILTER_COFFEE 8
-#define TAKE_CUP 9
+#define READY_TO_BREW 6
+#define ESPRESSO_BREWING 7
+#define LATTE_BREWING 8
+#define FILTER_COFFEE_BREWING 9
+#define TAKE_CUP 10
 
 //product selection defines
 #define NO_SELECTION 0
-#define ESPRESSO 6
-#define LATTE 7
-#define FILTER_COFFEE 8
+#define ESPRESSO 7 //same values as for the general state machine so we can just set brewerState to the selectedProduct.
+#define LATTE 8
+#define FILTER_COFFEE 9
 
 //timer defines
 #define TIMER1 1
 #define TIMER2 2
 #define TIMER3 3
 #define LED_BLINK 25 //25*10 ms = 250 ms
+#define GRIND_TIME 750 //7.5 seconds
+#define BREW_TIME 1400 //14 seconds
+#define LATTE_FROTH_TIME 620 //6.2 seconds
+#define BREW_COMPLETE_TIME 1000 //1 second
 
 
 #define LEDON 1
@@ -44,6 +49,10 @@
 
 #define CASH 1
 #define CARD 2
+
+#define ESPRESSO_PRICE 15 //dkk
+#define LATTE_PRICE 27 //dkk
+#define FILTER_COFFEE_PRICE 3 //dkk pr cl
 
 
 

@@ -48,7 +48,7 @@ void give_change(){
     }
 }
 
-void timer_task(void *pvParameters)
+void timer_task(void *pvParameters) //needs semaphores... (everywhere)
 {
     (void)pvParameters;
     TickType_t xLastWakeTime = xTaskGetTickCount();
@@ -118,6 +118,7 @@ void coffebrewer_task(void *pvParameters)
         {
         case PRODUCT_SELECT:
             //Reset all variables to default
+            xQueueReset(key_queue);
             selectedProduct = NO_SELECTION;
             paymentType = NO_SELECTION;
             cardNumber = 0;
@@ -189,6 +190,7 @@ void coffebrewer_task(void *pvParameters)
             break;
         case PAYMENT_SELECT:
             //update display
+            xQueueReset(key_queue);
             clr_LCD();
             move_LCD(0,0);
             wr_str_LCD("Select Payment:");
@@ -225,6 +227,7 @@ void coffebrewer_task(void *pvParameters)
             break;
         case CARD:
             //update display
+            xQueueReset(key_queue);
             clr_LCD();
             move_LCD(0,0);
             wr_str_LCD("Insert Card:");
@@ -306,6 +309,7 @@ void coffebrewer_task(void *pvParameters)
             break;
         case PINCODE:
             //update display
+            xQueueReset(key_queue);
             clr_LCD();
             move_LCD(0,0);
             wr_str_LCD("Enter PIN Code:");
@@ -335,13 +339,13 @@ void coffebrewer_task(void *pvParameters)
                         if(sum % 2 == 0)
                         {
                             //update display with success
-                            brewerState = selectedProduct;//set to brewing state based on selected product
+                            brewerState = CUP_PRESENCE;//move to next state (we just assume infinte money for filter coffee so no change or anything needed)
                         } else {
                             //update display with failure and return to product selection
                             brewerState = PRODUCT_SELECT;
                         }
                     }
-                    //update display
+                    //update display with * for each number entered for security
                     break;
                 case '*': //backspace
                     if(keyCounter > 0)
@@ -367,6 +371,8 @@ void coffebrewer_task(void *pvParameters)
             break;
         case CASH:
             //update display
+            xQueueReset(key_queue);
+            xQueueReset(encoder_queue);
             //get input from encoder
                 if(xQueueReceive(encoder_queue, &key_buffer, 20) == pdTRUE) //dont wait indef cause be also need to keep track of confirm/cancel input from keypad
                 {
@@ -383,12 +389,35 @@ void coffebrewer_task(void *pvParameters)
                 {
                     if(key_buffer == '#') //we are done with payment
                     {
-                        switch (PRODUCT_SELECT))
+                        switch (selectedProduct)
                         {
-                        case constant expression:
-                            /* code */
+                        case ESPRESSO:
+                            if (cashInserted >= ESPRESSO_PRICE)
+                            {
+                                //payment successful, update display and move to brewing state
+                                cashInserted -= ESPRESSO_PRICE; //calculate change to be given
+                                give_change();
+                                brewerState = CUP_PRESENCE;
+                            } else {
+                                //not enough cash inserted, update display accordingly 
+                                //maybe we let them continue to insert cash instead of going back to product selection?
+                            }
                             break;
-                        
+                        case LATTE:
+                            if (cashInserted >= LATTE_PRICE)
+                            {
+                                //payment successful, update display and move to brewing state
+                                cashInserted -= LATTE_PRICE; //calculate change to be given
+                                give_change();
+                                brewerState =  CUP_PRESENCE;
+                            } else {
+                                //not enough cash inserted, update display accordingly 
+                                //maybe we let them continue to insert cash instead of going back to product selection?
+                            }
+                            break;
+                        case FILTER_COFFEE: //depends on amount dispenced so handled later just continue for now.
+                            brewerState = CUP_PRESENCE;
+                            break;
                         default:
                             break;
                         }
@@ -401,19 +430,135 @@ void coffebrewer_task(void *pvParameters)
                 }  
             break;
         case CUP_PRESENCE:
-            /* code */
+            //update display
+            xQueueReset(button1_queue);
+            //wait for signal from "cup sensor" (aka button input)
+            if(xQueueReceive(button1_queue, &key_buffer, portMAX_DELAY) == pdTRUE){ //just check if its been clicked
+                brewerState = READY_TO_BREW;
+            }
             break;
+        case READY_TO_BREW:
+            //update display (waiting for start input)
+            xQueueReset(button2_queue);
+            if(xQueueReceive(button2_queue,  &key_buffer, portMAX_DELAY) == pdTRUE)
+            {
+                brewerState = selectedProduct; //move to brewing state based on selected product
+            }
+
         case ESPRESSO_BREWING:
-            /* code */
+            //update display with brewing status
+            //Grind coffee for 7.5 s, indicated by the yellow LED, then brew coffee for 14 s, indicated by red LED
+            timer1 = GRIND_TIME; //7.5 seconds
+            while (timer1 >0 )
+            {
+                timer2 = LED_BLINK; //blink yellow led while grinding
+                if(timer1 > GRIND_TIME - LED_BLINK) //only continue blinking if we have enough time left
+                {
+                    waitForTimer(TIMER2);
+                     xQueueSend(yellowQueue, &(INT16U){LEDON}, portMAX_DELAY);
+                 }   
+                timer2 = LED_BLINK;
+                 if(timer1 > GRIND_TIME - LED_BLINK) //only continue blinking if we have enough time left
+                {                    waitForTimer(TIMER2);
+                 }   
+                xQueueSend(yellowQueue, &(INT16U){LEDOFF}, portMAX_DELAY);
+            }
+            timer1 = BREW_TIME; //14 seconds
+            while (timer1 >0 )
+            {
+                timer2 = LED_BLINK; //blink red led while brewing
+                if(timer1 > BREW_TIME - LED_BLINK) //only continue blinking if we have enough time left
+                {
+                    waitForTimer(TIMER2);
+                     xQueueSend(redQueue, &(INT16U){LEDON}, portMAX_DELAY);
+                 }   
+                timer2 = LED_BLINK;
+                 if(timer1 > BREW_TIME - LED_BLINK) //only continue blinking if we have enough time left
+                {
+                    waitForTimer(TIMER2);
+                 }   
+                xQueueSend(redQueue, &(INT16U){LEDOFF}, portMAX_DELAY); //always turn off red led after brew time even if we stopped blinking before
+            }
+            //update display with brew complete
+            //clear take cup queue here so you can take it instantly after brew complete if you want to
+            timer1 = BREW_COMPLETE_TIME; //1 second to indicate brew complete before allowing cup to be taken
+            waitForTimer(TIMER1);
+            brewerState = TAKE_CUP; //move to next state
             break;
         case LATTE_BREWING:
-            /* code */
+            //same as espresso but with an extra step of frothing milk for 6.2 seconds with the green led on after grinding and brewing
+            timer1 = GRIND_TIME; //7.5 seconds
+            while (timer1 >0 )
+            {
+                timer2 = LED_BLINK; //blink yellow led while grinding
+                if(timer1 > GRIND_TIME - LED_BLINK) //only continue blinking if we have enough time left
+                {
+                    waitForTimer(TIMER2);
+                     xQueueSend(yellowQueue, &(INT16U){LEDON}, portMAX_DELAY);
+                 }   
+                timer2 = LED_BLINK;
+                 if(timer1 > GRIND_TIME - LED_BLINK) //only continue blinking if we have enough time left
+                {                    waitForTimer(TIMER2);
+                 }   
+                xQueueSend(yellowQueue, &(INT16U){LEDOFF}, portMAX_DELAY);
+            }
+            timer1 = BREW_TIME; //14 seconds
+            while (timer1 >0 )
+            {
+                timer2 = LED_BLINK; //blink red led while brewing
+                if(timer1 > BREW_TIME - LED_BLINK) //only continue blinking if we have enough time left
+                {
+                    waitForTimer(TIMER2);
+                     xQueueSend(redQueue, &(INT16U){LEDON}, portMAX_DELAY);
+                 }   
+                timer2 = LED_BLINK;
+                 if(timer1 > BREW_TIME - LED_BLINK) //only continue blinking if we have enough time left
+                {
+                    waitForTimer(TIMER2);
+                 }   
+                xQueueSend(redQueue, &(INT16U){LEDOFF}, portMAX_DELAY); //always turn off red led after brew time even if we stopped blinking before
+            }
+            timer1 = LATTE_FROTH_TIME; //6.2 seconds
+            while (timer1 >0 )
+            {
+                timer2 = LED_BLINK; //blink green led while frothing
+                if(timer1 > LATTE_FROTH_TIME - LED_BLINK) //only continue blinking if we have enough time left
+                {
+                    waitForTimer(TIMER2);
+                     xQueueSend(greenQueue, &(INT16U){LEDON}, portMAX_DELAY);
+                 }   
+                timer2 = LED_BLINK;
+                 if(timer1 > LATTE_FROTH_TIME - LED_BLINK) //only continue blinking if we have enough time left
+                {
+                    waitForTimer(TIMER2);
+                 }   
+                xQueueSend(greenQueue, &(INT16U){LEDOFF}, portMAX_DELAY); //always turn off green led after froth time even if we stopped blinking before
+            }
+            //update display with brew complete
+            //clear take cup queue here so you can take it instantly after brew complete if you want to
+            timer1 = BREW_COMPLETE_TIME; //1 second to indicate brew complete before allowing cup to be taken
+            waitForTimer(TIMER1);
+            brewerState = TAKE_CUP; //move to next state
             break;
-        case FILTER_COFFEE:
-            /* code */
+        case FILTER_COFFEE_BREWING:
+            //completely different...
+
+            /*– Dispensed while start (button 2) is pressed or until prepaid amount is reached.
+            – Rate: starts slow at 0.6 cl/s for 3 s, then 1.45 cl/s. More coffee can be added by repeated
+            pushes of the start button (button 2), but after 5 seconds of inactivity, the coffee dispensing
+            is finished. The brewing process is indicated by yellow LED.
+            – Display shows amount, unit price, total price */
+            //takes 20 ms pr input from button 2 when being held down so we should eat at a matching rate.
+
             break;
         case TAKE_CUP:
-            /* code */
+            //update display to take cup
+            xQueueReset(button1_queue);
+            //add logging
+            //wait for signal from "cup sensor" (aka button input) that cup has been taken
+            if(xQueueReceive(button1_queue, &key_buffer, portMAX_DELAY) == pdTRUE){ //just check if its been clicked
+                brewerState = PRODUCT_SELECT; //back to start for next customer
+            }
             break;
         
         default:
