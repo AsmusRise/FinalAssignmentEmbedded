@@ -32,7 +32,7 @@
 /*****************************   Constants   *******************************/
 
 /*****************************   Functions   *******************************/
-INT8U select_button(void);
+
 INT8U button_pushed_1(void);
 INT8U button_pushed_2(void);
 
