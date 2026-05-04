@@ -44,7 +44,7 @@ static INT8U key_catch(INT8U x, INT8U y)
     {'#', '9', '6', '3'}
   };
 
-  return matrix[x - 1][y - 1];
+  return matrix[x - 1][y - 1];  
 }
 
 static BOOLEAN scan_column(INT8U column, INT8U *pch)

@@ -158,7 +158,7 @@ void clr_LCD()
 *   Function : Clear LCD.
 ******************************************************************************/
 {
-  wr_ctrl_LCD( 0x01 );
+  wr_ctrl_LCD( 0x01 ); 
 }
 
 void home_LCD()

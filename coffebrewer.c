@@ -101,6 +101,13 @@ void coffebrewer_task(void *pvParameters)
                     break;
                 case '2':
                     //update display
+                    clr_LCD();
+                    move_LCD(0,0);
+                    wr_str_LCD("You selected: Latte");
+                    move_LCD(0,1);
+                    wr_str_LCD("Confirm? #: Yes, *: No");
+
+
                     if(selectConfirm())
                     {
                         selectedProduct = LATTE;
@@ -109,6 +116,13 @@ void coffebrewer_task(void *pvParameters)
                     break;
                 case '3':
                     //update display
+                    clr_LCD();
+                    move_LCD(0,0);
+                    wr_str_LCD("You selected: Filter Coffee");
+                    move_LCD(0,1);
+                    wr_str_LCD("Confirm? #: Yes, *: No");
+
+
                     if(selectConfirm())
                     {
                         selectedProduct = FILTER_COFFEE;
@@ -123,7 +137,13 @@ void coffebrewer_task(void *pvParameters)
             break;
         case PAYMENT_SELECT:
             //update display
-             if(xQueueReceive(key_queue,  &key_buffer, portMAX_DELAY) == pdTRUE)
+            clr_LCD();
+            move_LCD(0,0);
+            wr_str_LCD("Select Payment:");
+            move_LCD(0,1);
+            wr_str_LCD("1:Card 2:Cash");
+
+            if(xQueueReceive(key_queue,  &key_buffer, portMAX_DELAY) == pdTRUE)
             {
             
                 //button press received, state is now set to the button that was pressed
@@ -151,6 +171,12 @@ void coffebrewer_task(void *pvParameters)
             break;
         case CARD:
             //update display
+            clr_LCD();
+            move_LCD(0,0);
+            wr_str_LCD("Insert Card:");
+            move_LCD(0,1);
+            wr_str_LCD("Enter Card Number:");
+
             if(xQueueReceive(key_queue,  &key_buffer, portMAX_DELAY) == pdTRUE)
             {
                 switch (key_buffer)
@@ -171,9 +197,13 @@ void coffebrewer_task(void *pvParameters)
                     {
                         // max card number length reached, confirm selection
                         //update display
+                        clr_LCD();
+                        move_LCD(0,0);
+                        wr_str_LCD("press '#' to confirm card number");
+
                         if(selectConfirm())
                         {
-                        
+
                             //convert to number and save for pin confirmation
                             for(int i = 0; i < keyCounter; i++)
                             {
@@ -222,6 +252,11 @@ void coffebrewer_task(void *pvParameters)
             break;
         case PINCODE:
             //update display
+            clr_LCD();
+            move_LCD(0,0);
+            wr_str_LCD("Enter PIN Code:");
+
+
             if(xQueueReceive(key_queue,  &key_buffer, portMAX_DELAY) == pdTRUE)
             {
                 switch (key_buffer)
