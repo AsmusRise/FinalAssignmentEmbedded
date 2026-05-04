@@ -33,8 +33,11 @@
 
 /*****************************   Functions   *******************************/
 INT8U select_button(void);
+INT8U button_pushed_1(void);
+INT8U button_pushed_2(void);
 
-void buttonTask(void *pvParameters)
+void button_1_Task(void *pvParameters);
+void button_2_Task(void *pvParameters);
 /****************************** End Of Module *******************************/
 
 #endif /*BUTTON_H*/

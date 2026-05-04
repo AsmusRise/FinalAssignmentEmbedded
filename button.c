@@ -21,6 +21,8 @@
 #include "semphr.h"
 
 
+extern QueueHandle_t button_queue1;
+extern QueueHandle_t button_queue2;
 
 /*****************************    Defines    *******************************/
 
