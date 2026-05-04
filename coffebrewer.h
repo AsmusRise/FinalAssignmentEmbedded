@@ -17,9 +17,9 @@
  //brewer states
 #define PRODUCT_SELECT 0
 #define PAYMENT_SELECT 1
-#define CARD 2
+#define CARD_ENTRY 2
 #define PINCODE 3
-#define CASH 4
+#define CASH_ENTRY 4
 #define CUP_PRESENCE 5
 #define READY_TO_BREW 6
 #define ESPRESSO_BREWING 7
@@ -32,6 +32,10 @@
 #define ESPRESSO 7 //same values as for the general state machine so we can just set brewerState to the selectedProduct.
 #define LATTE 8
 #define FILTER_COFFEE 9
+
+//payment type defines
+#define PAY_CASH 1
+#define PAY_CARD 2
 
 //timer defines
 #define TIMER1 1
@@ -47,9 +51,6 @@
 #define LEDON 1
 #define LEDOFF 0
 
-#define CASH 1
-#define CARD 2
-
 #define ESPRESSO_PRICE 15 //dkk
 #define LATTE_PRICE 27 //dkk
 #define FILTER_COFFEE_PRICE 3 //dkk pr cl
@@ -61,6 +62,7 @@
 /*****************************   Functions   *******************************/
 
 void coffebrewer_task(void *pvParameters);
+void timer_task(void *pvParameters);
 /****************************** End Of Module *******************************/
 
 #endif /*COFFEBREWER_H*/
