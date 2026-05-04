@@ -14,6 +14,7 @@
 #include "status_led.h"
 #include "color_led.h"
 #include "adc.h"
+#include "encoder.h"
 #include "key.h"
 #include "lcd.h"
 #include "uart0.h"
@@ -49,6 +50,7 @@ QueueHandle_t greenQueue;
 QueueHandle_t yellowQueue;
 QueueHandle_t redQueue;
 QueueHandle_t key_queue;
+QueueHandle_t encoder_queue;
 QueueHandle_t lcd_queue;
 QueueHandle_t uart_tx_queue;
 QueueHandle_t uart_rx_queue;
@@ -66,6 +68,8 @@ int main(void)
     yellowQueue = xQueueCreate(1, sizeof(INT16U));
     redQueue = xQueueCreate(1, sizeof(INT16U));
     key_queue = xQueueCreate(1, sizeof(INT8U));
+    encoder_queue = xQueueCreate(1, sizeof(INT32S));
+    
     lcd_queue = xQueueCreate(128, sizeof(INT8U));
     uart_tx_queue = xQueueCreate(128, sizeof(INT8U));
     uart_rx_queue = xQueueCreate(128, sizeof(INT8U));
@@ -79,6 +83,7 @@ int main(void)
     xTaskCreate( red_led_task, "red", USERTASK_STACK_SIZE, NULL, LOW_PRIO, NULL);
     xTaskCreate( green_led_task, "green", USERTASK_STACK_SIZE, NULL, LOW_PRIO, NULL);
     xTaskCreate( yellow_led_task, "yellow", USERTASK_STACK_SIZE, NULL, LOW_PRIO, NULL);
+    xTaskCreate( encoder_task, "encoder", USERTASK_STACK_SIZE, NULL, LOW_PRIO, NULL);
     xTaskCreate( key_task, "key", USERTASK_STACK_SIZE, NULL, LOW_PRIO, NULL);
 
     xTaskCreate( lcd_task, "LCD", USERTASK_STACK_SIZE, NULL, LOW_PRIO, NULL );
