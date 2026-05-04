@@ -7,7 +7,7 @@
 * PROJECT....: EMP FreeRTOS Pot Scaler
 *
 * DESCRIPTION: Quadrature rotary encoder driver for the EMP board.
-*              FreeRTOS task polls the encoder and publishes position.
+*              FreeRTOS task polls the encoder and publishes step deltas.
 *
 *   From EMP pinout:
 *     PA5 = DIGI A  (encoder channel A)
@@ -25,10 +25,11 @@
 #define ENC_A_PIN   (1U << 5)    /* PA5 */
 #define ENC_B_PIN   (1U << 6)    /* PA6 */
 #define ENC_PINS    (ENC_A_PIN | ENC_B_PIN)
+#define ENC_COUNTS_PER_STEP  4
 
 /*****************************   Variables   *******************************/
 static INT8U  enc_prev_state = 0;
-static INT32S enc_position   = 0;
+static INT8S  enc_step_accum = 0;
 
 extern QueueHandle_t encoder_queue;
 
@@ -61,7 +62,7 @@ void init_encoder(void)
     enc_prev_state = 0;
     if (raw & ENC_A_PIN) enc_prev_state |= 0x02;
     if (raw & ENC_B_PIN) enc_prev_state |= 0x01;
-    enc_position = 0;
+    enc_step_accum = 0;
 }
 
 INT32S encoder_read(void)
@@ -72,10 +73,22 @@ INT32S encoder_read(void)
     if (raw & ENC_B_PIN) new_state |= 0x01;
 
     INT8U idx = (enc_prev_state << 2) | new_state;
-    enc_position += qei_table[idx];
+    enc_step_accum += qei_table[idx];
     enc_prev_state = new_state;
 
-    return enc_position;
+    if(enc_step_accum >= ENC_COUNTS_PER_STEP)
+    {
+        enc_step_accum = 0;
+        return 1;
+    }
+
+    if(enc_step_accum <= -ENC_COUNTS_PER_STEP)
+    {
+        enc_step_accum = 0;
+        return -1;
+    }
+
+    return 0;
 }
 
 BOOLEAN get_encoder(INT32S *position)
