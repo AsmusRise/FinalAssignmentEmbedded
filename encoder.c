@@ -26,6 +26,8 @@
 #define ENC_B_PIN   (1U << 6)    /* PA6 */
 #define ENC_PINS    (ENC_A_PIN | ENC_B_PIN)
 #define ENC_COUNTS_PER_STEP  4
+#define CLOCKWISE 1
+#define COUNTERCLOCKWISE 2
 
 /*****************************   Variables   *******************************/
 static INT8U  enc_prev_state = 0;
@@ -79,13 +81,13 @@ INT8U encoder_read(void)
     if(enc_step_accum >= ENC_COUNTS_PER_STEP)
     {
         enc_step_accum = 0;
-        return 1; // Clockwise
+        return CLOCKWISE; // Clockwise
     }
 
     if(enc_step_accum <= -ENC_COUNTS_PER_STEP)
     {
         enc_step_accum = 0;
-        return 2; // Counter clockwise
+        return COUNTERCLOCKWISE; // Counter clockwise
     }
 
     return 0;
