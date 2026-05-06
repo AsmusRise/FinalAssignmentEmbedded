@@ -10,6 +10,7 @@
 #include "key.h"
 #include "lcd.h"
 #include "uart0.h"
+#include <string.h>
 
 extern QueueHandle_t button_queue1;
 extern QueueHandle_t button_queue2;
@@ -118,11 +119,34 @@ void waitForTimer(INT8U timerID)
 //function to print to display
 void displayUpdate(INT8U *line1, INT8U *line2)
 {
+    char buf1[17];
+    char buf2[17];
+    static char prev1[17] = "";
+    static char prev2[17] = "";
+
+    if(line1 == NULL) line1 = (INT8U*)"";
+    if(line2 == NULL) line2 = (INT8U*)"";
+
+    /* copy and ensure NUL-termination, limit to 16 chars for 16x2 LCD */
+    strncpy(buf1, (char *)line1, 16);
+    buf1[16] = '\0';
+    strncpy(buf2, (char *)line2, 16);
+    buf2[16] = '\0';
+
+    /* if nothing changed, don't rewrite the LCD */
+    if (strcmp(prev1, buf1) == 0 && strcmp(prev2, buf2) == 0) {
+        return;
+    }
+
+    /* snapshot what we'll show (so future calls can compare) */
+    strncpy(prev1, buf1, 17);
+    strncpy(prev2, buf2, 17);
+
     clr_LCD();
     move_LCD(0,0);
-    wr_str_LCD(line1);
+    wr_str_LCD((INT8U*)buf1);
     move_LCD(0,1);
-    wr_str_LCD(line2);
+    wr_str_LCD((INT8U*)buf2);
 }
 
 BOOLEAN selectConfirm(void)
