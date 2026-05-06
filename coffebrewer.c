@@ -576,7 +576,7 @@ void coffebrewer_task(void *pvParameters)
             {
                 
                 
-                coffeRate = 0.6; //start rate at 0.6 cl/s
+                coffeeRate = 0.6; //start rate at 0.6 cl/s
                 perTickAmount = coffeeRate * 0.01f; //calculate how much we should dispense every 10 ms to match the desired rate in cl/s
                 while(timer1 > 0)
                 {
@@ -619,7 +619,7 @@ void coffebrewer_task(void *pvParameters)
             }
             else if(paymentType == PAY_CARD)
             {
-                coffeRate = 0.6; //start rate at 0.6 cl/s
+                coffeeRate = 0.6; //start rate at 0.6 cl/s
                 perTickAmount = coffeeRate * 0.01f; //calculate how much we should dispense every 10 ms to match the desired rate in cl/s
                 while(timer1 > 0)
                     {
@@ -637,7 +637,7 @@ void coffebrewer_task(void *pvParameters)
                     waitForTimer(TIMER3); //just to make sure we have a small delay before we start checking for inactivity so that we dont end the brewing process immediately if they just click the button once instead of holding it down
                     }
 
-                coffeRate = 1.45f; //after 3 seconds we increase the rate to 1.45 cl/s
+                coffeeRate = 1.45f; //after 3 seconds we increase the rate to 1.45 cl/s
                 perTickAmount = coffeeRate * 0.01f; //calculate how much we should dispense every 10 ms to match the desired rate in cl/s
                 while(timer2 > 0)
                     {
