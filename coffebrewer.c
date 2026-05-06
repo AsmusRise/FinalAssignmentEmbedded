@@ -48,18 +48,16 @@ FP32 coffeeRate = 0.6f;
 FP32 remaining_cash = 0.0f;
 FP32 perTickAmount = 0.0f;
 
-#define START_TIMER1(value) do { xSemaphoreTake(timer1Semaphore, 0); timer1 = (value); } while(0)
-#define START_TIMER2(value) do { xSemaphoreTake(timer2Semaphore, 0); timer2 = (value); } while(0)
-#define START_TIMER3(value) do { xSemaphoreTake(timer3Semaphore, 0); timer3 = (value); } while(0)
-
 
 void give_change(){
     while(cashInserted > 0) //one coin at a time by flashing green led
     {
-        START_TIMER1(LED_BLINK);
+        xSemaphoreTake(timer1Semaphore, 0);  /* drain any stale signal */
+        timer1 = LED_BLINK;
         waitForTimer(TIMER1);
         xQueueSend(greenQueue, &(INT16U){LEDON}, portMAX_DELAY);
-        START_TIMER1(LED_BLINK);
+        xSemaphoreTake(timer1Semaphore, 0);  /* drain any stale signal */
+        timer1 = LED_BLINK;
         waitForTimer(TIMER1);
         xQueueSend(greenQueue, &(INT16U){LEDOFF}, portMAX_DELAY);
         cashInserted -= 1;
@@ -76,26 +74,18 @@ void timer_task(void *pvParameters) //needs semaphores... (everywhere)
         if(timer1 > 0)
         {
             timer1--;
-            if(timer1 == 0)
-            {
-                xSemaphoreGive(timer1Semaphore);
-            }
+            if(timer1 == 0) xSemaphoreGive(timer1Semaphore);
+
         }
         if(timer2 > 0)
         {
             timer2--;
-            if(timer2 == 0)
-            {
-                xSemaphoreGive(timer2Semaphore);
-            }
+            if(timer2 == 0) xSemaphoreGive(timer2Semaphore);
         }
         if(timer3 > 0)
         {
             timer3--;
-            if(timer3 == 0)
-            {
-                xSemaphoreGive(timer3Semaphore);
-            }
+            if(timer3 == 0)  xSemaphoreGive(timer3Semaphore);
         }
         vTaskDelayUntil(&xLastWakeTime, 10 / portTICK_RATE_MS);
     }
@@ -488,32 +478,39 @@ void coffebrewer_task(void *pvParameters)
             displayUpdate("Espresso selected", "Grinding coffee beans...");
 
             //Grind coffee for 7.5 s, indicated by the yellow LED, then brew coffee for 14 s, indicated by red LED
-            START_TIMER1(GRIND_TIME); //7.5 seconds
+            xSemaphoreTake(timer1Semaphore, 0);  /* drain any stale signal */
+            timer1 = GRIND_TIME; //7.5 seconds
             while (timer1 >0 )
             {
-                START_TIMER2(LED_BLINK); //blink yellow led while grinding
+                xSemaphoreTake(timer2Semaphore, 0);  /* drain any stale signal */
+                timer2 = LED_BLINK; //blink yellow led while grinding
                 if(timer1 > GRIND_TIME - LED_BLINK) //only continue blinking if we have enough time left
                 {
                     waitForTimer(TIMER2);
-                     xQueueSend(yellowQueue, &(INT16U){LEDON}, portMAX_DELAY);
+                    xQueueSend(yellowQueue, &(INT16U){LEDON}, portMAX_DELAY);
                  }
-                START_TIMER2(LED_BLINK);
+                xSemaphoreTake(timer2Semaphore, 0);
+                timer2 = LED_BLINK;
                  if(timer1 > GRIND_TIME - LED_BLINK) //only continue blinking if we have enough time left
-                {                    waitForTimer(TIMER2);
+                {                    
+                    waitForTimer(TIMER2);
                  }
                 xQueueSend(yellowQueue, &(INT16U){LEDOFF}, portMAX_DELAY);
             }
-            START_TIMER1(BREW_TIME); //14 seconds
+            xSemaphoreTake(timer1Semaphore, 0);
+            timer1 = BREW_TIME; //14 seconds
             displayUpdate("Espresso selected", "Brewing coffee...");
             while (timer1 >0 )
             {
-                START_TIMER2(LED_BLINK); //blink red led while brewing
+                xSemaphoreTake(timer2Semaphore, 0);
+                timer2 = LED_BLINK; //blink red led while brewing
                 if(timer1 > BREW_TIME - LED_BLINK) //only continue blinking if we have enough time left
                 {
                     waitForTimer(TIMER2);
                      xQueueSend(redQueue, &(INT16U){LEDON}, portMAX_DELAY);
                  }
-                START_TIMER2(LED_BLINK);
+                xSemaphoreTake(timer2Semaphore, 0);
+                timer2 = LED_BLINK;
                  if(timer1 > BREW_TIME - LED_BLINK) //only continue blinking if we have enough time left
                 {
                     waitForTimer(TIMER2);
@@ -525,23 +522,27 @@ void coffebrewer_task(void *pvParameters)
             displayUpdate("Espresso ready!", "Please take your cup");
 
             //clear take cup queue here so you can take it instantly after brew complete if you want to
-            START_TIMER1(BREW_COMPLETE_TIME); //1 second to indicate brew complete before allowing cup to be taken
+            xSemaphoreTake(timer1Semaphore, 0);
+            timer1 = BREW_COMPLETE_TIME; //1 second to indicate brew complete before allowing cup to be taken
             waitForTimer(TIMER1);
             brewerState = TAKE_CUP; //move to next state
             break;
         case LATTE_BREWING:
             //same as espresso but with an extra step of frothing milk for 6.2 seconds with the green led on after grinding and brewing
-            START_TIMER1(GRIND_TIME); //7.5 seconds
+            xSemaphoreTake(timer1Semaphore, 0);  /* drain any stale signal */
+            timer1 = GRIND_TIME; //7.5 seconds
             displayUpdate("Latte selected", "Grinding coffee beans...");
             while (timer1 >0 )
             {
-                START_TIMER2(LED_BLINK); //blink yellow led while grinding
+                xSemaphoreTake(timer2Semaphore, 0);  /* drain any stale signal */
+                timer2 = LED_BLINK; //blink yellow led while grinding
                 if(timer1 > GRIND_TIME - LED_BLINK) //only continue blinking if we have enough time left
                 {
                     waitForTimer(TIMER2);
                      xQueueSend(yellowQueue, &(INT16U){LEDON}, portMAX_DELAY);
                  }
-                START_TIMER2(LED_BLINK);
+                xSemaphoreTake(timer2Semaphore, 0);
+                timer2 = LED_BLINK;
                  if(timer1 > GRIND_TIME - LED_BLINK) //only continue blinking if we have enough time left
                 {                    waitForTimer(TIMER2);
                  }
@@ -549,33 +550,39 @@ void coffebrewer_task(void *pvParameters)
             }
             displayUpdate("Latte selected", "Brewing coffee...");
 
-            START_TIMER1(BREW_TIME); //14 seconds
+            xSemaphoreTake(timer1Semaphore, 0);
+            timer1 = BREW_TIME; //14 seconds
             while (timer1 >0 )
             {
-                START_TIMER2(LED_BLINK); //blink red led while brewing
+                xSemaphoreTake(timer2Semaphore, 0);
+                timer2 = LED_BLINK; //blink red led while brewing
                 if(timer1 > BREW_TIME - LED_BLINK) //only continue blinking if we have enough time left
                 {
                     waitForTimer(TIMER2);
                      xQueueSend(redQueue, &(INT16U){LEDON}, portMAX_DELAY);
                  }
-                START_TIMER2(LED_BLINK);
+                xSemaphoreTake(timer2Semaphore, 0);
+                timer2 = LED_BLINK;
                  if(timer1 > BREW_TIME - LED_BLINK) //only continue blinking if we have enough time left
                 {
                     waitForTimer(TIMER2);
                  }
                 xQueueSend(redQueue, &(INT16U){LEDOFF}, portMAX_DELAY); //always turn off red led after brew time even if we stopped blinking before
             }
-            START_TIMER1(LATTE_FROTH_TIME); //6.2 seconds
+            xSemaphoreTake(timer1Semaphore, 0);
+            timer1 = LATTE_FROTH_TIME; //6.2 seconds
             displayUpdate("Latte selected", "Frothing milk...");
             while (timer1 >0 )
             {
-                START_TIMER2(LED_BLINK); //blink green led while frothing
+                xSemaphoreTake(timer2Semaphore, 0);
+                timer2 = LED_BLINK; //blink green led while frothing
                 if(timer1 > LATTE_FROTH_TIME - LED_BLINK) //only continue blinking if we have enough time left
                 {
                     waitForTimer(TIMER2);
                      xQueueSend(greenQueue, &(INT16U){LEDON}, portMAX_DELAY);
                  }
-                START_TIMER2(LED_BLINK);
+                xSemaphoreTake(timer2Semaphore, 0);
+                timer2 = LED_BLINK;
                  if(timer1 > LATTE_FROTH_TIME - LED_BLINK) //only continue blinking if we have enough time left
                 {
                     waitForTimer(TIMER2);
@@ -586,13 +593,15 @@ void coffebrewer_task(void *pvParameters)
             displayUpdate("Latte ready!", "Please take your cup");
 
             //clear take cup queue here so you can take it instantly after brew complete if you want to
-            START_TIMER1(BREW_COMPLETE_TIME); //1 second to indicate brew complete before allowing cup to be taken
+            xSemaphoreTake(timer1Semaphore, 0);
+            timer1 = BREW_COMPLETE_TIME; //1 second to indicate brew complete before allowing cup to be taken
             waitForTimer(TIMER1);
             brewerState = TAKE_CUP; //move to next state
             break;
         case FILTER_COFFEE_BREWING:
             //completely different...
-            START_TIMER1(SLOW_RATE_TIME);
+            xSemaphoreTake(timer1Semaphore, 0);  /* drain any stale signal */
+            timer1 = SLOW_RATE_TIME;
             cardSumToPay = 0.0f;
             remaining_cash = cashInserted; 
             /*– Dispensed while start (button 2) is pressed or until prepaid amount is reached.
@@ -621,13 +630,15 @@ void coffebrewer_task(void *pvParameters)
 
                         if(key_buffer == 1)
                         {
-                            START_TIMER2(INACTIVITY_TIME); 
+                            xSemaphoreTake(timer2Semaphore, 0);
+                            timer2 = INACTIVITY_TIME;
                             coffeeDispensed += perTickAmount; 
                             remaining_cash -= perTickAmount * FILTER_COFFEE_PRICE;
                             displayUpdate("amount:" + ftostr(coffeeDispensed) + " unit price: $" + ftostr(FILTER_COFFEE_PRICE), "total: $" + ftostr(coffeeDispensed * FILTER_COFFEE_PRICE));
                         }
                     }
-                    START_TIMER3(1);
+                    xSemaphoreTake(timer3Semaphore, 0);
+                    timer3 = 1;
                     waitForTimer(TIMER3);
                 }
 
@@ -640,14 +651,16 @@ void coffebrewer_task(void *pvParameters)
                     {
                         if(key_buffer == 1)
                         {
-                            START_TIMER2(INACTIVITY_TIME);
+                            xSemaphoreTake(timer2Semaphore, 0);
+                            timer2 = INACTIVITY_TIME;
                             
                             coffeeDispensed += perTickAmount; 
                             remaining_cash -= perTickAmount * FILTER_COFFEE_PRICE;
                             displayUpdate("amount:" + ftostr(coffeeDispensed) + " unit price: $" + ftostr(FILTER_COFFEE_PRICE), "total: $" + ftostr(coffeeDispensed * FILTER_COFFEE_PRICE));
                         }
                     }
-                    START_TIMER3(1);
+                    xSemaphoreTake(timer3Semaphore, 0);
+                    timer3 = 1;
                     waitForTimer(TIMER3);
                 }
             }
@@ -662,13 +675,15 @@ void coffebrewer_task(void *pvParameters)
                         {
                             if(key_buffer == 1)
                             {
-                                START_TIMER2(INACTIVITY_TIME);
+                                xSemaphoreTake(timer2Semaphore, 0);
+                                timer2 = INACTIVITY_TIME;
                                 coffeeDispensed += perTickAmount;
                                 cardSumToPay += perTickAmount * FILTER_COFFEE_PRICE; //update the sum to pay based on how much coffee they have dispensed
                                 displayUpdate("amount:" + ftostr(coffeeDispensed) + " unit price: $" + ftostr(FILTER_COFFEE_PRICE), "total: $" + ftostr(cardSumToPay));
                             }
                         }
-                    START_TIMER3(1);
+                    xSemaphoreTake(timer3Semaphore, 0);
+                    timer3 = 1;
                     waitForTimer(TIMER3); //just to make sure we have a small delay before we start checking for inactivity so that we dont end the brewing process immediately if they just click the button once instead of holding it down
                     }
 
@@ -680,14 +695,16 @@ void coffebrewer_task(void *pvParameters)
                         {
                         if(key_buffer == 1)
                         {
-                            START_TIMER2(INACTIVITY_TIME);
+                            xSemaphoreTake(timer2Semaphore, 0);
+                            timer2 = INACTIVITY_TIME;
                             
                             coffeeDispensed += perTickAmount; 
                             cardSumToPay += perTickAmount * FILTER_COFFEE_PRICE; //update the sum to pay based on how much coffee they have dispensed
                             displayUpdate("amount:" + ftostr(coffeeDispensed) + " unit price: $" + ftostr(FILTER_COFFEE_PRICE), "total: $" + ftostr(cardSumToPay));
                         }
                         }
-                    START_TIMER3(1);
+                    xSemaphoreTake(timer3Semaphore, 0);
+                    timer3 = 1;
                     waitForTimer(TIMER3);
                         
                     } 
