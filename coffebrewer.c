@@ -28,6 +28,7 @@ INT16U selectedProduct = 0;
 INT16U timer1 = 0;
 INT16U timer2 = 0;
 INT16U timer3 = 0;
+INT16U timer4 = 0;
 INT8U key_buffer = 0;
 INT8U keyCounter = 0;
 INT8U keylist[20];
@@ -76,6 +77,10 @@ void timer_task(void *pvParameters) //needs semaphores... (everywhere)
         {
             timer3--;
         }
+        if(timer4 > 0)
+        {
+            timer4--;
+        }
         vTaskDelayUntil(&xLastWakeTime, 10 / portTICK_RATE_MS);
     }
 }
@@ -102,6 +107,11 @@ void waitForTimer(INT8U timerID)
                 vTaskDelay(10 / portTICK_RATE_MS);
             }
             break;
+        case 4: 
+            while(timer4 >0)
+            {
+                vTaskDelay(1000 / portTICK_RATE_MS);
+            }
     }
 }
 
@@ -584,7 +594,8 @@ void coffebrewer_task(void *pvParameters)
 
                         }
                     }
-                    waitForTimer(TIMER3);
+                    timer4 = 1;
+                    waitForTimer(TIMER4);
                 }
 
                 coffeeRate = 1.45f; //after 3 seconds we increase the rate to 1.45 cl/s
@@ -600,8 +611,8 @@ void coffebrewer_task(void *pvParameters)
                             remaining_cash -= coffeeRate * FILTER_COFFEE_PRICE;
                         }
                     }
-                    timer3 = 1;
-                    waitForTimer(TIMER3);
+                    timer4 = 1;
+                    waitForTimer(TIMER4);
                 }
             }
             else if(paymentType == PAY_CARD)
@@ -619,8 +630,8 @@ void coffebrewer_task(void *pvParameters)
                                 cardSumToPay += coffeRate * FILTER_COFFEE_PRICE; //update the sum to pay based on how much coffee they have dispensed
                             }
                         }
-                    timer3 = 1;
-                    waitForTimer(TIMER3); //just to make sure we have a small delay before we start checking for inactivity so that we dont end the brewing process immediately if they just click the button once instead of holding it down
+                    timer4 = 1;
+                    waitForTimer(TIMER4); //just to make sure we have a small delay before we start checking for inactivity so that we dont end the brewing process immediately if they just click the button once instead of holding it down
                     }
 
                 coffeRate = 1.45f; //after 3 seconds we increase the rate to 1.45 cl/s
@@ -637,12 +648,13 @@ void coffebrewer_task(void *pvParameters)
                             
                         }
                         }
-                    timer3 = 1;
-                    waitForTimer(TIMER3);
+                    timer4 = 1;
+                    waitForTimer(TIMER4);
                         
                     } 
+            }
             brewerState = TAKE_CUP; 
-
+            
             break;
         case TAKE_CUP:
             //update display to take cup
