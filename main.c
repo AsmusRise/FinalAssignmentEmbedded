@@ -59,6 +59,9 @@ QueueHandle_t lcd_queue;
 QueueHandle_t uart_tx_queue;
 QueueHandle_t uart_rx_queue;
 QueueHandle_t transaction_queue;
+SemaphoreHandle_t timer1Semaphore;
+SemaphoreHandle_t timer2Semaphore;
+SemaphoreHandle_t timer3Semaphore;
 
 
 int main(void)
@@ -83,6 +86,9 @@ int main(void)
 
     //create the mutex
     xSemaphore = xSemaphoreCreateMutex();
+    timer1Semaphore = xSemaphoreCreateBinary();
+    timer2Semaphore = xSemaphoreCreateBinary();
+    timer3Semaphore = xSemaphoreCreateBinary();
 
     xTaskCreate( status_led_task, "Status_led", USERTASK_STACK_SIZE, NULL, LOW_PRIO, NULL );
     xTaskCreate( adc_task, "ADC", USERTASK_STACK_SIZE, NULL, LOW_PRIO, NULL );
