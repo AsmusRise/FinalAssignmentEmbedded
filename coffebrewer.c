@@ -28,7 +28,6 @@ INT16U selectedProduct = 0;
 INT16U timer1 = 0;
 INT16U timer2 = 0;
 INT16U timer3 = 0;
-INT16U timer4 = 0;
 INT8U key_buffer = 0;
 INT8U keyCounter = 0;
 INT8U keylist[20];
@@ -42,7 +41,7 @@ FP32 cardSumToPay = 0.0f;
 FP32 coffeeDispensed = 0.0f;
 FP32 coffeeRate = 0.6f;
 FP32 remaining_cash = 0.0f;
-
+FP32 perTickAmount = 0.0f;
 
 
 void give_change(){
@@ -576,7 +575,9 @@ void coffebrewer_task(void *pvParameters)
             if(paymentType == PAY_CASH)
             {
                 
+                
                 coffeRate = 0.6; //start rate at 0.6 cl/s
+                perTickAmount = coffeeRate * 0.01f; //calculate how much we should dispense every 10 ms to match the desired rate in cl/s
                 while(timer1 > 0)
                 {
                     if(remaining_cash <= 0.0f) //if we have dispensed all the coffee the customer paid for we can just end the brewing process even if they havent released the button yet.
@@ -589,16 +590,17 @@ void coffebrewer_task(void *pvParameters)
                         if(key_buffer == 1)
                         {
                             timer2 = INACTIVITY_TIME; 
-                            coffeeDispensed += coffeeRate; 
-                            remaining_cash -= coffeeRate * FILTER_COFFEE_PRICE;
-
+                            coffeeDispensed += perTickAmount; 
+                            remaining_cash -= perTickAmount * FILTER_COFFEE_PRICE;
                         }
                     }
-                    timer4 = 1;
-                    waitForTimer(TIMER4);
+                    timer3 = 1;
+                    waitForTimer(TIMER3);
                 }
 
                 coffeeRate = 1.45f; //after 3 seconds we increase the rate to 1.45 cl/s
+                perTickAmount = coffeeRate * 0.01f; //calculate how much we should dispense every 10 ms to match the desired rate in cl/s
+
                 while (remaining_cash > 0.0f && timer2 > 0) //keep dispensing as long as we have coffee to dispense and we havent had 5 seconds of inactivity
                 {
                     if(xQueueReceive(button_queue2, &key_buffer, 20 ) == pdTRUE)
@@ -607,17 +609,18 @@ void coffebrewer_task(void *pvParameters)
                         {
                             timer2 = INACTIVITY_TIME;
                             
-                            coffeeDispensed += coffeeRate; 
-                            remaining_cash -= coffeeRate * FILTER_COFFEE_PRICE;
+                            coffeeDispensed += perTickAmount; 
+                            remaining_cash -= perTickAmount * FILTER_COFFEE_PRICE;
                         }
                     }
-                    timer4 = 1;
-                    waitForTimer(TIMER4);
+                    timer3 = 1;
+                    waitForTimer(TIMER3);
                 }
             }
             else if(paymentType == PAY_CARD)
             {
                 coffeRate = 0.6; //start rate at 0.6 cl/s
+                perTickAmount = coffeeRate * 0.01f; //calculate how much we should dispense every 10 ms to match the desired rate in cl/s
                 while(timer1 > 0)
                     {
                     //for card payment we just let them dispense until they release the button since we cant really track the amount they need to pay in the same way as with cash and we dont want to just set a fixed amount that they can dispense since it might not be enough or it might be too much.
@@ -626,15 +629,16 @@ void coffebrewer_task(void *pvParameters)
                             if(key_buffer == 1)
                             {
                                 timer2 = INACTIVITY_TIME;
-                                coffeeDispensed += coffeRate;
-                                cardSumToPay += coffeRate * FILTER_COFFEE_PRICE; //update the sum to pay based on how much coffee they have dispensed
+                                coffeeDispensed += perTickAmount;
+                                cardSumToPay += perTickAmount * FILTER_COFFEE_PRICE; //update the sum to pay based on how much coffee they have dispensed
                             }
                         }
-                    timer4 = 1;
-                    waitForTimer(TIMER4); //just to make sure we have a small delay before we start checking for inactivity so that we dont end the brewing process immediately if they just click the button once instead of holding it down
+                    timer3 = 1;
+                    waitForTimer(TIMER3); //just to make sure we have a small delay before we start checking for inactivity so that we dont end the brewing process immediately if they just click the button once instead of holding it down
                     }
 
                 coffeRate = 1.45f; //after 3 seconds we increase the rate to 1.45 cl/s
+                perTickAmount = coffeeRate * 0.01f; //calculate how much we should dispense every 10 ms to match the desired rate in cl/s
                 while(timer2 > 0)
                     {
                     if(xQueueReceive(button_queue2, &key_buffer, 20 ) == pdTRUE)
@@ -643,13 +647,13 @@ void coffebrewer_task(void *pvParameters)
                         {
                             timer2 = INACTIVITY_TIME;
                             
-                            coffeeDispensed += coffeRate; 
-                            cardSumToPay += coffeRate * FILTER_COFFEE_PRICE; //update the sum to pay based on how much coffee they have dispensed
+                            coffeeDispensed += perTickAmount; 
+                            cardSumToPay += perTickAmount * FILTER_COFFEE_PRICE; //update the sum to pay based on how much coffee they have dispensed
                             
                         }
                         }
-                    timer4 = 1;
-                    waitForTimer(TIMER4);
+                    timer3 = 1;
+                    waitForTimer(TIMER3);
                         
                     } 
             }

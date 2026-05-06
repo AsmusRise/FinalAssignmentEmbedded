@@ -41,7 +41,6 @@
 #define TIMER1 1
 #define TIMER2 2
 #define TIMER3 3
-#define TIMER4 4
 #define LED_BLINK 25 //25*10 ms = 250 ms
 #define GRIND_TIME 750 //7.5 seconds
 #define BREW_TIME 1400 //14 seconds
