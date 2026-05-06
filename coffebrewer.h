@@ -14,6 +14,17 @@
 /***************************** Include files *******************************/
 
 /*****************************    Defines    *******************************/
+#include "emp_type.h"
+#include "queue.h"
+
+typedef struct
+{
+	INT8U timer_id;
+	INT16U ticks;
+} timer_command_t;
+
+extern QueueHandle_t timerCommandQueue;
+
  //brewer states
 #define PRODUCT_SELECT 0
 #define PAYMENT_SELECT 1
