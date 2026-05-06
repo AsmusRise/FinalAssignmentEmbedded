@@ -16,6 +16,7 @@
 #include "adc.h"
 #include "encoder.h"
 #include "key.h"
+#include "logger.h"
 #include "lcd.h"
 #include "uart0.h"
 #include "button.h"
@@ -57,6 +58,7 @@ QueueHandle_t encoder_queue;
 QueueHandle_t lcd_queue;
 QueueHandle_t uart_tx_queue;
 QueueHandle_t uart_rx_queue;
+QueueHandle_t transaction_queue;
 
 
 int main(void)
@@ -77,6 +79,7 @@ int main(void)
     lcd_queue = xQueueCreate(128, sizeof(INT8U));
     uart_tx_queue = xQueueCreate(128, sizeof(INT8U));
     uart_rx_queue = xQueueCreate(128, sizeof(INT8U));
+    transaction_queue = xQueueCreate(1, sizeof(transaction_t));
 
     //create the mutex
     xSemaphore = xSemaphoreCreateMutex();
@@ -101,6 +104,9 @@ int main(void)
     // tasks for the coffebrewer
     xTaskCreate( timer_task, "timer", USERTASK_STACK_SIZE, NULL, LOW_PRIO, NULL );
     xTaskCreate( coffebrewer_task, "coffebrewer", USERTASK_STACK_SIZE, NULL, LOW_PRIO, NULL );
+
+    // logging task
+    xTaskCreate( log_task, "logger", USERTASK_STACK_SIZE, NULL, LOW_PRIO, NULL );
 
     vTaskStartScheduler();
 	return 0;
