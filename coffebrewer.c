@@ -18,7 +18,7 @@ extern QueueHandle_t redQueue;
 extern QueueHandle_t key_queue;
 extern QueueHandle_t lcd_queue;
 extern QueueHandle_t uart_tx_queue;
-extern QueueHandle_t uart_rx_queue;cash
+extern QueueHandle_t uart_rx_queue;
 extern QueueHandle_t adc_queue;
 extern QueueHandle_t adc_to_uart_queue;
 extern QueueHandle_t encoder_queue;
@@ -37,11 +37,10 @@ INT16U pincode = 0;
 INT16U cashInserted = 0;
 INT16U paymentType = 0; //2 for card, 1 for cash
 
-INT16U cardSumToPay = 0;
-INT16U coffeeDispensed = 0;
-INT16U coffeRate = 0.6;
-INT16U remaining_cash = 0;
-INT16U coffee_amount = 0;
+FP32 cardSumToPay = 0.0f;
+FP32 coffeeDispensed = 0.0f;
+FP32 coffeeRate = 0.6f;
+FP32 remaining_cash = 0.0f;
 
 
 
@@ -429,7 +428,7 @@ void coffebrewer_task(void *pvParameters)
                             break;
                         case FILTER_COFFEE: //depends on amount dispenced so handled later just continue for now.
                             brewerState = CUP_PRESENCE;
-                            paymentType = 1
+                            paymentType = 1;
                             break;
                         default:
                             break;
@@ -556,7 +555,7 @@ void coffebrewer_task(void *pvParameters)
         case FILTER_COFFEE_BREWING:
             //completely different...
             timer1 = SLOW_RATE_TIME;
-            cashToPayForFilterCoffee = 0;
+            cardSumToPay = 0.0f;
             remaining_cash = cashInserted; 
             /*– Dispensed while start (button 2) is pressed or until prepaid amount is reached.
             – Rate: starts slow at 0.6 cl/s for 3 s, then 1.45 cl/s. More coffee can be added by repeated
@@ -570,26 +569,26 @@ void coffebrewer_task(void *pvParameters)
                 coffeRate = 0.6; //start rate at 0.6 cl/s
                 while(timer1 > 0)
                 {
-                    if(remaining_cash <= 0) //if we have dispensed all the coffee the customer paid for we can just end the brewing process even if they havent released the button yet.
+                    if(remaining_cash <= 0.0f) //if we have dispensed all the coffee the customer paid for we can just end the brewing process even if they havent released the button yet.
                     {
                         brewerState = TAKE_CUP;
                         break;
                     }
-                    elseif(xQueueReceive(button_queue2, &key_buffer, 20 ) == pdTRUE) //check if button is being held down
+                    else if(xQueueReceive(button_queue2, &key_buffer, 20 ) == pdTRUE) //check if button is being held down
                     {
                         if(key_buffer == 1)
                         {
                             timer2 = INACTIVITY_TIME; 
-                            coffee_amount += coffeRate; 
-                            remaining_cash -= coffeRate * FILTER_COFFEE_PRICE;
+                            coffeeDispensed += coffeeRate; 
+                            remaining_cash -= coffeeRate * FILTER_COFFEE_PRICE;
 
                         }
                     }
                     waitForTimer(TIMER3);
                 }
 
-                coffeRate = 1.45; //after 3 seconds we increase the rate to 1.45 cl/s
-                while (remaining_cash > 0 && timer2 > 0) //keep dispensing as long as we have coffee to dispense and we havent had 5 seconds of inactivity
+                coffeeRate = 1.45f; //after 3 seconds we increase the rate to 1.45 cl/s
+                while (remaining_cash > 0.0f && timer2 > 0) //keep dispensing as long as we have coffee to dispense and we havent had 5 seconds of inactivity
                 {
                     if(xQueueReceive(button_queue2, &key_buffer, 20 ) == pdTRUE)
                     {
@@ -597,8 +596,8 @@ void coffebrewer_task(void *pvParameters)
                         {
                             timer2 = INACTIVITY_TIME;
                             
-                            coffee_amount += coffeRate; 
-                            remaining_cash -= coffeRate * FILTER_COFFEE_PRICE;
+                            coffeeDispensed += coffeeRate; 
+                            remaining_cash -= coffeeRate * FILTER_COFFEE_PRICE;
                         }
                     }
                     timer3 = 1;
@@ -624,7 +623,7 @@ void coffebrewer_task(void *pvParameters)
                     waitForTimer(TIMER3); //just to make sure we have a small delay before we start checking for inactivity so that we dont end the brewing process immediately if they just click the button once instead of holding it down
                     }
 
-                coffeRate = 1.45; //after 3 seconds we increase the rate to 1.45 cl/s
+                coffeRate = 1.45f; //after 3 seconds we increase the rate to 1.45 cl/s
                 while(timer2 > 0)
                     {
                     if(xQueueReceive(button_queue2, &key_buffer, 20 ) == pdTRUE)
