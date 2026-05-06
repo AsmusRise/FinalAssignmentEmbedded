@@ -479,7 +479,7 @@ void coffebrewer_task(void *pvParameters)
                  }
                 xQueueSend(yellowQueue, &(INT16U){LEDOFF}, portMAX_DELAY);
             }
-            timer1 = BREW_TIME; //14 seconds
+            START_TIMER1(BREW_TIME); //14 seconds
             displayUpdate("Espresso selected", "Brewing coffee...");
             while (timer1 >0 )
             {
@@ -507,7 +507,7 @@ void coffebrewer_task(void *pvParameters)
             break;
         case LATTE_BREWING:
             //same as espresso but with an extra step of frothing milk for 6.2 seconds with the green led on after grinding and brewing
-            timer1 = GRIND_TIME; //7.5 seconds
+            START_TIMER1(GRIND_TIME); //7.5 seconds
             displayUpdate("Latte selected", "Grinding coffee beans...");
             while (timer1 >0 )
             {
@@ -525,7 +525,7 @@ void coffebrewer_task(void *pvParameters)
             }
             displayUpdate("Latte selected", "Brewing coffee...");
 
-            timer1 = BREW_TIME; //14 seconds
+            START_TIMER1(BREW_TIME); //14 seconds
             while (timer1 >0 )
             {
                 START_TIMER2(LED_BLINK); //blink red led while brewing
@@ -541,7 +541,7 @@ void coffebrewer_task(void *pvParameters)
                  }
                 xQueueSend(redQueue, &(INT16U){LEDOFF}, portMAX_DELAY); //always turn off red led after brew time even if we stopped blinking before
             }
-            timer1 = LATTE_FROTH_TIME; //6.2 seconds
+            START_TIMER1(LATTE_FROTH_TIME); //6.2 seconds
             displayUpdate("Latte selected", "Frothing milk...");
             while (timer1 >0 )
             {
