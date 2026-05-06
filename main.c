@@ -59,6 +59,7 @@ QueueHandle_t lcd_queue;
 QueueHandle_t uart_tx_queue;
 QueueHandle_t uart_rx_queue;
 QueueHandle_t transaction_queue;
+QueueHandle_t timerCommandQueue;
 SemaphoreHandle_t timer1Semaphore;
 SemaphoreHandle_t timer2Semaphore;
 SemaphoreHandle_t timer3Semaphore;
@@ -83,6 +84,7 @@ int main(void)
     uart_tx_queue = xQueueCreate(128, sizeof(INT8U));
     uart_rx_queue = xQueueCreate(128, sizeof(INT8U));
     transaction_queue = xQueueCreate(1, sizeof(transaction_t));
+    timerCommandQueue = xQueueCreate(8, sizeof(timer_command_t));
 
     //create the mutex
     xSemaphore = xSemaphoreCreateMutex();
