@@ -615,7 +615,7 @@ void coffebrewer_task(void *pvParameters)
                             if(key_buffer == 1)
                             {
                                 timer2 = INACTIVITY_TIME;
-                                coffee_amount += coffeRate;
+                                coffeeDispensed += coffeRate;
                                 cardSumToPay += coffeRate * FILTER_COFFEE_PRICE; //update the sum to pay based on how much coffee they have dispensed
                             }
                         }
@@ -632,7 +632,7 @@ void coffebrewer_task(void *pvParameters)
                         {
                             timer2 = INACTIVITY_TIME;
                             
-                            coffee_amount += coffeRate; 
+                            coffeeDispensed += coffeRate; 
                             cardSumToPay += coffeRate * FILTER_COFFEE_PRICE; //update the sum to pay based on how much coffee they have dispensed
                             
                         }
