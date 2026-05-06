@@ -18,7 +18,7 @@ extern QueueHandle_t redQueue;
 extern QueueHandle_t key_queue;
 extern QueueHandle_t lcd_queue;
 extern QueueHandle_t uart_tx_queue;
-extern QueueHandle_t uart_rx_queue;
+extern QueueHandle_t uart_rx_queue;cash
 extern QueueHandle_t adc_queue;
 extern QueueHandle_t adc_to_uart_queue;
 extern QueueHandle_t encoder_queue;
