@@ -114,6 +114,16 @@ void waitForTimer(INT8U timerID)
     }
 }
 
+//function to print to display
+void displayUpdate(INT8U *line1, INT8U *line2)
+{
+    clr_LCD();
+    move_LCD(0,0);
+    wr_str_LCD(line1);
+    move_LCD(0,1);
+    wr_str_LCD(line2);
+}
+
 BOOLEAN selectConfirm(void)
 {
     while(xQueueReceive(key_queue, &key_buffer, portMAX_DELAY) == pdTRUE)
@@ -148,9 +158,7 @@ void coffebrewer_task(void *pvParameters)
                 keylist[i] = 0;
             }
             keyCounter = 0;
-            wr_str_LCD("Select Product:");
-            move_LCD(0,1);
-            wr_str_LCD("1:Espresso 2:Latte 3:Filter Coffee");
+            displayUpdate("Select Product:", "1:Espresso 2:Latte 3:Filter Coffee");
 
             if(xQueueReceive(key_queue,  &key_buffer, portMAX_DELAY) == pdTRUE)
             {
@@ -159,11 +167,8 @@ void coffebrewer_task(void *pvParameters)
                 switch (key_buffer)
                 {
                 case '1':
-                    clr_LCD();
-                    move_LCD(0,0);
-                    wr_str_LCD("You selected: Espresso");
-                    move_LCD(0,1);
-                    wr_str_LCD("Confirm? #: Yes, *: No");
+                    //update display
+                    displayUpdate("You selected: Espresso", "Confirm? #: Yes, *: No");
 
                     if(selectConfirm())
                     {
@@ -173,11 +178,7 @@ void coffebrewer_task(void *pvParameters)
                     break;
                 case '2':
                     //update display
-                    clr_LCD();
-                    move_LCD(0,0);
-                    wr_str_LCD("You selected: Latte");
-                    move_LCD(0,1);
-                    wr_str_LCD("Confirm? #: Yes, *: No");
+                    displayUpdate("You selected: Latte", "Confirm? #: Yes, *: No");
 
 
                     if(selectConfirm())
@@ -188,11 +189,7 @@ void coffebrewer_task(void *pvParameters)
                     break;
                 case '3':
                     //update display
-                    clr_LCD();
-                    move_LCD(0,0);
-                    wr_str_LCD("You selected: Filter Coffee");
-                    move_LCD(0,1);
-                    wr_str_LCD("Confirm? #: Yes, *: No");
+                    displayUpdate("You selected: Filter Coffee", "Confirm? #: Yes, *: No");
 
 
                     if(selectConfirm())
@@ -210,11 +207,7 @@ void coffebrewer_task(void *pvParameters)
         case PAYMENT_SELECT:
             //update display
             xQueueReset(key_queue);
-            clr_LCD();
-            move_LCD(0,0);
-            wr_str_LCD("Select Payment:");
-            move_LCD(0,1);
-            wr_str_LCD("1:Card 2:Cash");
+            displayUpdate("Select Payment:", "1:Card 2:Cash");
 
             if(xQueueReceive(key_queue,  &key_buffer, portMAX_DELAY) == pdTRUE)
             {
@@ -224,6 +217,7 @@ void coffebrewer_task(void *pvParameters)
                 {
                 case '1':
                    //update display
+                    displayUpdate("You selected: Card", "Confirm? #: Yes, *: No");
                     if(selectConfirm())
                     {
                         brewerState = CARD_ENTRY;
@@ -232,6 +226,7 @@ void coffebrewer_task(void *pvParameters)
                     break;
                 case '2':
                     //update display
+                    displayUpdate("You selected: Cash", "Confirm? #: Yes, *: No");
                     if(selectConfirm())
                     {
                         brewerState = CASH_ENTRY;
@@ -247,11 +242,7 @@ void coffebrewer_task(void *pvParameters)
         case CARD_ENTRY:
             //update display
             xQueueReset(key_queue);
-            clr_LCD();
-            move_LCD(0,0);
-            wr_str_LCD("Insert Card:");
-            move_LCD(0,1);
-            wr_str_LCD("Enter Card Number:");
+            displayUpdate("Insert Card:", "Enter Card Number:");
 
             if(xQueueReceive(key_queue,  &key_buffer, portMAX_DELAY) == pdTRUE)
             {
@@ -273,9 +264,7 @@ void coffebrewer_task(void *pvParameters)
                     {
                         // max card number length reached, confirm selection
                         //update display
-                        clr_LCD();
-                        move_LCD(0,0);
-                        wr_str_LCD("press '#' to confirm card number");
+                        displayUpdate("press '#' to confirm card number", "");
 
                         if(selectConfirm())
                         {
@@ -300,10 +289,12 @@ void coffebrewer_task(void *pvParameters)
                             }
                             keyCounter = 0;
                             //back to card number input, update display
+                            displayUpdate("Insert Card:", "Enter Card Number:");
                         }
 
                     }
                     //update display
+
                     break;
                 case '*': //backspace
                     if(keyCounter > 0)
@@ -329,9 +320,7 @@ void coffebrewer_task(void *pvParameters)
         case PINCODE:
             //update display
             xQueueReset(key_queue);
-            clr_LCD();
-            move_LCD(0,0);
-            wr_str_LCD("Enter PIN Code:");
+                displayUpdate("Enter PIN Code:", "Use keypad, #: Confirm, *: Clear");
 
 
             if(xQueueReceive(key_queue,  &key_buffer, portMAX_DELAY) == pdTRUE)
@@ -390,12 +379,14 @@ void coffebrewer_task(void *pvParameters)
             break;
         case CASH_ENTRY:
             //update display
+            displayUpdate("Insert Cash", "");
             xQueueReset(key_queue);
             xQueueReset(encoder_queue);
             //get input from encoder
                 if(xQueueReceive(encoder_queue, &key_buffer, 20) == pdTRUE) //dont wait indef cause be also need to keep track of confirm/cancel input from keypad
                 {
                     //update display with current sum
+                    displayUpdate("Current cash inserted:", itoa(cashInserted));
                     if(key_buffer == 1)
                     {
                         cashInserted += 20;
@@ -447,6 +438,7 @@ void coffebrewer_task(void *pvParameters)
                         give_change();
                         brewerState = PRODUCT_SELECT;
                         //update display
+                        displayUpdate("Payment cancelled.", "Returning change...");
                     }
                 }
             break;
@@ -468,6 +460,8 @@ void coffebrewer_task(void *pvParameters)
             break;
         case ESPRESSO_BREWING:
             //update display with brewing status
+            displayUpdate("Espresso selected", "Grinding coffee beans...");
+
             //Grind coffee for 7.5 s, indicated by the yellow LED, then brew coffee for 14 s, indicated by red LED
             timer1 = GRIND_TIME; //7.5 seconds
             while (timer1 >0 )
@@ -485,6 +479,7 @@ void coffebrewer_task(void *pvParameters)
                 xQueueSend(yellowQueue, &(INT16U){LEDOFF}, portMAX_DELAY);
             }
             timer1 = BREW_TIME; //14 seconds
+            displayUpdate("Espresso selected", "Brewing coffee...");
             while (timer1 >0 )
             {
                 timer2 = LED_BLINK; //blink red led while brewing
@@ -500,7 +495,10 @@ void coffebrewer_task(void *pvParameters)
                  }
                 xQueueSend(redQueue, &(INT16U){LEDOFF}, portMAX_DELAY); //always turn off red led after brew time even if we stopped blinking before
             }
+
             //update display with brew complete
+            displayUpdate("Espresso ready!", "Please take your cup");
+
             //clear take cup queue here so you can take it instantly after brew complete if you want to
             timer1 = BREW_COMPLETE_TIME; //1 second to indicate brew complete before allowing cup to be taken
             waitForTimer(TIMER1);
@@ -509,6 +507,7 @@ void coffebrewer_task(void *pvParameters)
         case LATTE_BREWING:
             //same as espresso but with an extra step of frothing milk for 6.2 seconds with the green led on after grinding and brewing
             timer1 = GRIND_TIME; //7.5 seconds
+            displayUpdate("Latte selected", "Grinding coffee beans...");
             while (timer1 >0 )
             {
                 timer2 = LED_BLINK; //blink yellow led while grinding
@@ -523,6 +522,8 @@ void coffebrewer_task(void *pvParameters)
                  }
                 xQueueSend(yellowQueue, &(INT16U){LEDOFF}, portMAX_DELAY);
             }
+            displayUpdate("Latte selected", "Brewing coffee...");
+
             timer1 = BREW_TIME; //14 seconds
             while (timer1 >0 )
             {
@@ -540,6 +541,7 @@ void coffebrewer_task(void *pvParameters)
                 xQueueSend(redQueue, &(INT16U){LEDOFF}, portMAX_DELAY); //always turn off red led after brew time even if we stopped blinking before
             }
             timer1 = LATTE_FROTH_TIME; //6.2 seconds
+            displayUpdate("Latte selected", "Frothing milk...");
             while (timer1 >0 )
             {
                 timer2 = LED_BLINK; //blink green led while frothing
@@ -556,6 +558,8 @@ void coffebrewer_task(void *pvParameters)
                 xQueueSend(greenQueue, &(INT16U){LEDOFF}, portMAX_DELAY); //always turn off green led after froth time even if we stopped blinking before
             }
             //update display with brew complete
+            displayUpdate("Latte ready!", "Please take your cup");
+
             //clear take cup queue here so you can take it instantly after brew complete if you want to
             timer1 = BREW_COMPLETE_TIME; //1 second to indicate brew complete before allowing cup to be taken
             waitForTimer(TIMER1);
@@ -580,18 +584,22 @@ void coffebrewer_task(void *pvParameters)
                 perTickAmount = coffeeRate * 0.01f; //calculate how much we should dispense every 10 ms to match the desired rate in cl/s
                 while(timer1 > 0)
                 {
+                    displayUpdate("Filter Coffee Brewing", "Dispensing coffee...");
                     if(remaining_cash <= 0.0f) //if we have dispensed all the coffee the customer paid for we can just end the brewing process even if they havent released the button yet.
                     {
+                        displayUpdate("Ran out of currency", "Please take cup!");
                         brewerState = TAKE_CUP;
                         break;
                     }
                     else if(xQueueReceive(button_queue2, &key_buffer, 20 ) == pdTRUE) //check if button is being held down
                     {
+
                         if(key_buffer == 1)
                         {
                             timer2 = INACTIVITY_TIME; 
                             coffeeDispensed += perTickAmount; 
                             remaining_cash -= perTickAmount * FILTER_COFFEE_PRICE;
+                            displayUpdate("amount:" + ftostr(coffeeDispensed) + " unit price: $" + ftostr(FILTER_COFFEE_PRICE), "total: $" + ftostr(coffeeDispensed * FILTER_COFFEE_PRICE));
                         }
                     }
                     timer3 = 1;
@@ -611,6 +619,7 @@ void coffebrewer_task(void *pvParameters)
                             
                             coffeeDispensed += perTickAmount; 
                             remaining_cash -= perTickAmount * FILTER_COFFEE_PRICE;
+                            displayUpdate("amount:" + ftostr(coffeeDispensed) + " unit price: $" + ftostr(FILTER_COFFEE_PRICE), "total: $" + ftostr(coffeeDispensed * FILTER_COFFEE_PRICE));
                         }
                     }
                     timer3 = 1;
@@ -631,6 +640,7 @@ void coffebrewer_task(void *pvParameters)
                                 timer2 = INACTIVITY_TIME;
                                 coffeeDispensed += perTickAmount;
                                 cardSumToPay += perTickAmount * FILTER_COFFEE_PRICE; //update the sum to pay based on how much coffee they have dispensed
+                                displayUpdate("amount:" + ftostr(coffeeDispensed) + " unit price: $" + ftostr(FILTER_COFFEE_PRICE), "total: $" + ftostr(cardSumToPay));
                             }
                         }
                     timer3 = 1;
@@ -649,7 +659,7 @@ void coffebrewer_task(void *pvParameters)
                             
                             coffeeDispensed += perTickAmount; 
                             cardSumToPay += perTickAmount * FILTER_COFFEE_PRICE; //update the sum to pay based on how much coffee they have dispensed
-                            
+                            displayUpdate("amount:" + ftostr(coffeeDispensed) + " unit price: $" + ftostr(FILTER_COFFEE_PRICE), "total: $" + ftostr(cardSumToPay));
                         }
                         }
                     timer3 = 1;
@@ -662,6 +672,7 @@ void coffebrewer_task(void *pvParameters)
             break;
         case TAKE_CUP:
             //update display to take cup
+            displayUpdate("Please take your cup", "(press button 1 when done)");
             xQueueReset(button_queue1);
             //add logging
             //wait for signal from "cup sensor" (aka button input) that cup has been taken
