@@ -362,6 +362,7 @@ void lcd_task( void *pvParameters )
             case 0xFF:
               uart0_putc('C'); uart_puthex(0xFF); uart0_putc('\n');
               clr_LCD();
+              vTaskDelay(20 / portTICK_RATE_MS);
               break;
             case ESC:
               uart0_putc('S'); uart_puthex(ch); uart0_putc('\n');
@@ -370,6 +371,7 @@ void lcd_task( void *pvParameters )
             default:
               uart0_putc('W'); uart_puthex(ch); uart0_putc('\n');
               out_LCD( ch );
+              vTaskDelay(20 / portTICK_RATE_MS);
           }
         }
         break;
