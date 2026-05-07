@@ -38,9 +38,9 @@
 /* Helper: send a byte as two hex ASCII characters over UART for debugging */
 static void uart_puthex(INT8U v)
 {
-  const char hex[] = "0123456789ABCDEF";
-  uart0_putc((INT8U)hex[(v >> 4) & 0x0F]);
-  uart0_putc((INT8U)hex[v & 0x0F]);
+  static const INT8U hex[] = "0123456789ABCDEF";
+  uart0_putc(hex[(v >> 4) & 0x0F]);
+  uart0_putc(hex[v & 0x0F]);
 }
 
 /*****************************    Defines    *******************************/
@@ -365,7 +365,7 @@ void lcd_task( void *pvParameters )
               clr_LCD();
               break;
             case ESC:
-              uart0_putc('S'); uart0_puthex(ch); uart0_putc('\n');
+              uart0_putc('S'); uart_puthex(ch); uart0_putc('\n');
               state = LCD_ESC_RECEIVED;
               break;
             default:
