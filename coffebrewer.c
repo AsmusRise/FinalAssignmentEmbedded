@@ -57,8 +57,8 @@ FP32 coffeeRate = 0.6f;
 FP32 remaining_cash = 0.0f;
 FP32 perTickAmount = 0.0f;
 
-char line1[17];
-char line2[17];
+INT8U line1[17];
+INT8U line2[17];
 
 INT32U brewer_get_time_of_day_seconds(void)
 {
