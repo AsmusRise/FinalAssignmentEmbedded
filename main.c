@@ -48,6 +48,7 @@ static void setupHardware(void)
   init_systick();
   led_init();
   uart0_init(9600, 8, 1, 'n');
+  lcd_init();
 }
 
 SemaphoreHandle_t xSemaphore = NULL;
