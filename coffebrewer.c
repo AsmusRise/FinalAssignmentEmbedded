@@ -10,6 +10,7 @@
 #include "key.h"
 #include "lcd.h"
 #include "uart0.h"
+#include "logger.h"
 #include <string.h>
 #include <stdio.h>
 
@@ -811,7 +812,47 @@ void coffebrewer_task(void *pvParameters)
             //update display to take cup
             displayUpdate("Please take your cup", "(press button 1 when done)");
             xQueueReset(button_queue1);
-            //add logging
+            
+            //Log the completed transaction
+            {
+                transaction_t transaction;
+                TickType_t uptime_ticks = xTaskGetTickCount();
+                
+                // Convert ticks to seconds (assuming configTICK_RATE_HZ is defined in FreeRTOS config)
+                transaction.uptime_sec = uptime_ticks / configTICK_RATE_HZ;
+                transaction.product = (INT8U)selectedProduct;  // 7=ESPRESSO, 8=LATTE, 9=FILTER_COFFEE
+                
+                // Calculate price and amount based on product type
+                if(selectedProduct == ESPRESSO)
+                {
+                    transaction.price = ESPRESSO_PRICE;
+                    transaction.amount = 1;
+                }
+                else if(selectedProduct == LATTE)
+                {
+                    transaction.price = LATTE_PRICE;
+                    transaction.amount = 1;
+                }
+                else if(selectedProduct == FILTER_COFFEE)
+                {
+                    transaction.price = (INT16U)(FILTER_COFFEE_PRICE * coffeeDispensed);
+                    transaction.amount = (INT8U)coffeeDispensed;
+                }
+                
+                // Build payment string
+                if(paymentType == PAY_CASH)
+                {
+                    strcpy(transaction.payment, "CASH");
+                }
+                else if(paymentType == PAY_CARD)
+                {
+                    snprintf(transaction.payment, 17, "%016llu", cardNumber);  // Format as 16-digit card number
+                }
+                
+                // Send transaction to logging queue (overwrite any pending)
+                xQueueOverwrite(transaction_queue, &transaction);
+            }
+            
             //wait for signal from "cup sensor" (aka button input) that cup has been taken
             if(xQueueReceive(button_queue1, &key_buffer, portMAX_DELAY) == pdTRUE){ //just check if its been clicked
                 brewerState = PRODUCT_SELECT; //back to start for next customer
