@@ -43,8 +43,6 @@ static void setupHardware(void)
   // TODO: Put hardware configuration and initialisation in here
 
   // Warning: If you do not initialize the hardware clock, the timings will be inaccurate
-  
-  status_led_init();
   init_systick();
   led_init();
   uart0_init(9600, 8, 1, 'n');
