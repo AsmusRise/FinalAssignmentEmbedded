@@ -35,6 +35,14 @@
 #include "queue.h"
 #include "uart0.h"
 
+/* Helper: send a byte as two hex ASCII characters over UART for debugging */
+static void uart_puthex(INT8U v)
+{
+  const char hex[] = "0123456789ABCDEF";
+  uart0_putc((INT8U)hex[(v >> 4) & 0x0F]);
+  uart0_putc((INT8U)hex[v & 0x0F]);
+}
+
 /*****************************    Defines    *******************************/
 
 enum LCD_states
@@ -333,6 +341,10 @@ void lcd_task( void *pvParameters )
       case LCD_INIT:
         if( LCD_init_sequense[LCD_init_idx] != 0xFF )
         {
+          /* debug: report init command */
+          uart0_putc('I');
+          uart_puthex(LCD_init_sequense[LCD_init_idx]);
+          uart0_putc('\n');
           wr_ctrl_LCD( LCD_init_sequense[LCD_init_idx++] );
         }
         else
@@ -349,12 +361,15 @@ void lcd_task( void *pvParameters )
           switch( ch )
           {
             case 0xFF:
+              uart0_putc('C'); uart_puthex(0xFF); uart0_putc('\n');
               clr_LCD();
               break;
             case ESC:
+              uart0_putc('S'); uart0_puthex(ch); uart0_putc('\n');
               state = LCD_ESC_RECEIVED;
               break;
             default:
+              uart0_putc('W'); uart_puthex(ch); uart0_putc('\n');
               out_LCD( ch );
           }
         }
