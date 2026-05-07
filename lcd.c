@@ -236,12 +236,12 @@ void move_LCD( INT8U x, INT8U y )
  ******************************************************************************/
 void lcd_init(void)
 {
-  volatile int dummy;
-  int i, j;
+    volatile int dummy;
 
-  /* Enable GPIOC and GPIOD */
+  /* Enable GPIOC and GPIOD clocks */
   SYSCTL_RCGC2_R |= SYSCTL_RCGC2_GPIOC | SYSCTL_RCGC2_GPIOD;
-  dummy = SYSCTL_RCGC2_R; /* short delay */
+  dummy = SYSCTL_RCGC2_R; /* delay after clock enable */
+  dummy = SYSCTL_RCGC2_R; /* extra delay for stability */
 
   /* Configure PC4-PC7 as outputs (D4..D7) */
   GPIO_PORTC_DIR_R |= 0xF0;
@@ -251,18 +251,12 @@ void lcd_init(void)
   GPIO_PORTD_DIR_R |= 0x0C;
   GPIO_PORTD_DEN_R |= 0x0C;
 
-  /* Clear outputs */
+  /* Clear outputs to safe state */
   GPIO_PORTC_DATA_R &= ~0xF0;
   GPIO_PORTD_DATA_R &= ~0x0C;
 
-  /* Run the LCD init sequence synchronously (short busy-wait between commands) */
-  for (i = 0; LCD_init_sequense[i] != 0xFF; i++)
-  {
-    wr_ctrl_LCD(LCD_init_sequense[i]);
-    for (j = 0; j < 20000; j++); /* short delay */
-  }
-
-  for (j = 0; j < 20000; j++); /* final settle */
+  /* LCD init sequence (wr_ctrl_LCD) is handled by lcd_task
+     with FreeRTOS delays, not busy-wait here */
 }
 
 
