@@ -273,9 +273,14 @@ void lcd_test_task( void *pvParameters )
   move_LCD(0,1);
   wr_str_LCD((INT8U*)"world");
 
-  /* allow time for lcd_task to process queued characters */
-  vTaskDelay(1000 / portTICK_RATE_MS);
-  vTaskDelete(NULL);
+    /* allow time for lcd_task to process all queued characters */
+  vTaskDelay(2000 / portTICK_RATE_MS);
+
+  /* Loop forever - keep task alive for observation */
+  while(1)
+  {
+    vTaskDelay(5000 / portTICK_RATE_MS); /* sleep 5 seconds */
+  }
 }
 
 /*****************************  FreeRTOS Task  *****************************/
