@@ -54,7 +54,7 @@ static BOOLEAN uart_read_line(char *dst, INT16U dst_len)
 
   while(1)
   {
-    if(xQueueReceive(uart_rx_queue, &ch, portMAX_DELAY) != pdTRUE)
+    if(xQueueReceive(uart_rx_queue, &ch, 1000 / portTICK_RATE_MS) != pdTRUE)
     {
       return 0;
     }
