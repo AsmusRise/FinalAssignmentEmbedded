@@ -86,9 +86,6 @@ int main(void)
     timer3Semaphore = xSemaphoreCreateBinary();
 
     
-    xTaskCreate( red_led_task, "red", USERTASK_STACK_SIZE, NULL, LOW_PRIO, NULL);
-    xTaskCreate( green_led_task, "green", USERTASK_STACK_SIZE, NULL, LOW_PRIO, NULL);
-    xTaskCreate( yellow_led_task, "yellow", USERTASK_STACK_SIZE, NULL, LOW_PRIO, NULL);
     xTaskCreate( encoder_task, "encoder", USERTASK_STACK_SIZE, NULL, LOW_PRIO, NULL);
     xTaskCreate( key_task, "key", USERTASK_STACK_SIZE, NULL, LOW_PRIO, NULL);
 

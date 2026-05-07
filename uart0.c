@@ -30,7 +30,6 @@
 #include <stdio.h>
 
 
-extern QueueHandle_t adc_to_uart_queue;
 extern QueueHandle_t uart_tx_queue;
 extern QueueHandle_t uart_rx_queue;
 extern SemaphoreHandle_t xSemaphore;
@@ -457,23 +456,3 @@ void uart_rx_task( void *pvParameters )
   }
 }
 
-void uartTask( void *pvParameters )
-/*****************************************************************************
-*   Input    : pvParameters (unused)
-*   Output   : -
-*   Function : FreeRTOS task - reads ADC values from queue and prints
-*              them over UART. (Debug/demo task)
-*****************************************************************************/
-{
-  INT16U received_pot_value = 0;
-  char myString[32];
-
-  while(1)
-  {
-    if( xQueueReceive( adc_to_uart_queue, &received_pot_value, portMAX_DELAY ))
-    {
-      sprintf( myString, "Val: %d", received_pot_value );
-      uart0_puts_selfmade( (INT8U*)myString );
-    }
-  }
-}
