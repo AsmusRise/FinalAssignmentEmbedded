@@ -231,6 +231,59 @@ void move_LCD( INT8U x, INT8U y )
   wr_ch_LCD( Pos );
 }
 
+/*****************************************************************************
+ *  lcd_init: configure GPIO and perform short HD44780 init sequence
+ ******************************************************************************/
+void lcd_init(void)
+{
+  volatile int dummy;
+  int i, j;
+
+  /* Enable GPIOC and GPIOD */
+  SYSCTL_RCGC2_R |= SYSCTL_RCGC2_GPIOC | SYSCTL_RCGC2_GPIOD;
+  dummy = SYSCTL_RCGC2_R; /* short delay */
+
+  /* Configure PC4-PC7 as outputs (D4..D7) */
+  GPIO_PORTC_DIR_R |= 0xF0;
+  GPIO_PORTC_DEN_R |= 0xF0;
+
+  /* Configure PD2-PD3 as outputs (RS, E) */
+  GPIO_PORTD_DIR_R |= 0x0C;
+  GPIO_PORTD_DEN_R |= 0x0C;
+
+  /* Clear outputs */
+  GPIO_PORTC_DATA_R &= ~0xF0;
+  GPIO_PORTD_DATA_R &= ~0x0C;
+
+  /* Run the LCD init sequence synchronously (short busy-wait between commands) */
+  for (i = 0; LCD_init_sequense[i] != 0xFF; i++)
+  {
+    wr_ctrl_LCD(LCD_init_sequense[i]);
+    for (j = 0; j < 20000; j++); /* short delay */
+  }
+
+  for (j = 0; j < 20000; j++); /* final settle */
+}
+
+
+/*****************************************************************************
+ *  lcd_test_task: simple one-shot test that prints "hello"/"world"
+ ******************************************************************************/
+void lcd_test_task( void *pvParameters )
+{
+  (void)pvParameters;
+
+  clr_LCD();
+  move_LCD(0,0);
+  wr_str_LCD((INT8U*)"hello");
+  move_LCD(0,1);
+  wr_str_LCD((INT8U*)"world");
+
+  /* allow time for lcd_task to process queued characters */
+  vTaskDelay(1000 / portTICK_RATE_MS);
+  vTaskDelete(NULL);
+}
+
 /*****************************  FreeRTOS Task  *****************************/
 
 void lcd_task( void *pvParameters )
@@ -248,7 +301,7 @@ void lcd_task( void *pvParameters )
 {
   INT8U ch;
   INT8U LCD_init_idx = 0;
-  enum LCD_states state = LCD_POWER_UP;
+  enum LCD_states state = LCD_READY;
 
   while(1)
   {

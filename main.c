@@ -40,6 +40,7 @@ static void setupHardware(void)
   status_led_init();
   init_systick();
   led_init();
+  lcd_init();
   uart0_init(9600, 8, 1, 'n');
 }
 
@@ -92,7 +93,10 @@ int main(void)
     //xTaskCreate( encoder_task, "encoder", USERTASK_STACK_SIZE, NULL, LOW_PRIO, NULL);
     //xTaskCreate( key_task, "key", USERTASK_STACK_SIZE, NULL, LOW_PRIO, NULL);
 
-    //xTaskCreate( lcd_task, "LCD", USERTASK_STACK_SIZE, NULL, LOW_PRIO, NULL );
+    /* Start LCD service task and a one-shot test task */
+    xTaskCreate( lcd_task, "LCD", USERTASK_STACK_SIZE, NULL, LOW_PRIO, NULL );
+    xTaskCreate( lcd_test_task, "LCD_TEST", USERTASK_STACK_SIZE, NULL, LOW_PRIO, NULL );
+
     //xTaskCreate( uart_tx_task, "UART_TX", USERTASK_STACK_SIZE, NULL, LOW_PRIO, NULL );
     //xTaskCreate( uart_rx_task, "UART_RX", USERTASK_STACK_SIZE, NULL, LOW_PRIO, NULL );
 

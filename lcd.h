@@ -69,6 +69,20 @@ void move_LCD( INT8U x, INT8U y );
 *   Function : Move cursor to position (x,y) via ESC sequence.
 *****************************************************************************/
 
+void lcd_init(void);
+/*****************************************************************************
+*   Input    : -
+*   Output   : -
+*   Function : Initialize GPIO and LCD controller (call before scheduler).
+******************************************************************************/
+
+void lcd_test_task( void *pvParameters );
+/*****************************************************************************
+*   Input    : pvParameters (unused)
+*   Output   : -
+*   Function : Task used to test LCD API: prints "hello" / "world".
+******************************************************************************/
+
 void lcd_task( void *pvParameters );
 /*****************************************************************************
 *   Input    : pvParameters (unused)
