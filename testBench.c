@@ -11,7 +11,6 @@
 #include "FreeRTOS.h"
 #include "task.h"
 #include "queue.h"
-#include "tm4c123gh6pm.h"
 #include "emp_type.h"
 #include "status_led.h"
 #include "color_led.h"
@@ -22,9 +21,6 @@
 extern QueueHandle_t uart_tx_queue;
 extern QueueHandle_t uart_rx_queue;
 extern QueueHandle_t key_queue;
-extern QueueHandle_t greenQueue;
-extern QueueHandle_t yellowQueue;
-extern QueueHandle_t redQueue;
 
 /*****************************************************************************
 * test_debug_printf - Send formatted debug string over UART
@@ -46,10 +42,9 @@ void test_debug_printf(const char *fmt, ...)
 void test_status_led_blink(void *pvParameters)
 {
   (void)pvParameters;
+  TickType_t xLastWakeTime = xTaskGetTickCount();
   INT32U blink_count = 0;
   char buffer[17];
-
-  status_led_init();
 
   test_debug_printf("\r\n=== STATUS LED BLINK TEST ===\r\n");
   test_debug_printf("Status LED should toggle every 500ms\r\n");
@@ -62,22 +57,22 @@ void test_status_led_blink(void *pvParameters)
 
   while(1)
   {
-    GPIO_PORTD_DATA_R ^= 0x40;
+    status_led_on();
     test_debug_printf("BLINK #%lu: LED ON\r\n", blink_count);
     move_LCD(0, 1);
     snprintf(buffer, 16, "ON  %lu", blink_count);
     wr_str_LCD((INT8U*)buffer);
     
-    vTaskDelay(500 / portTICK_RATE_MS);
+    vTaskDelayUntil(&xLastWakeTime, 500 / portTICK_RATE_MS);
 
-    GPIO_PORTD_DATA_R ^= 0x40;
+    status_led_off();
     test_debug_printf("BLINK #%lu: LED OFF\r\n", blink_count);
     move_LCD(0, 1);
     snprintf(buffer, 16, "OFF %lu", blink_count);
     wr_str_LCD((INT8U*)buffer);
     
     blink_count++;
-    vTaskDelay(500 / portTICK_RATE_MS);
+    vTaskDelayUntil(&xLastWakeTime, 500 / portTICK_RATE_MS);
   }
 }
 
@@ -185,9 +180,8 @@ void test_button_press(void *pvParameters)
 void test_color_led(void *pvParameters)
 {
   (void)pvParameters;
+  TickType_t xLastWakeTime = xTaskGetTickCount();
   INT32U cycle = 0;
-  INT16U led_on_value = 1;
-  INT16U led_off_value = 0;
 
   test_debug_printf("\r\n=== COLOR LED TEST ===\r\n");
   test_debug_printf("LEDs should cycle: Green -> Yellow -> Red -> Off, repeat\r\n");
@@ -199,34 +193,34 @@ void test_color_led(void *pvParameters)
   while(1)
   {
     /* Green ON */
-    xQueueSend(greenQueue, &led_on_value, portMAX_DELAY);
+    led_on(LED_GREEN);
     test_debug_printf("CYCLE #%lu: GREEN ON\r\n", cycle);
     move_LCD(0, 1);
     wr_str_LCD((INT8U*)"GREEN ON");
-    vTaskDelay(500 / portTICK_RATE_MS);
+    vTaskDelayUntil(&xLastWakeTime, 500 / portTICK_RATE_MS);
 
     /* Yellow ON */
-    xQueueSend(greenQueue, &led_off_value, portMAX_DELAY);
-    xQueueSend(yellowQueue, &led_on_value, portMAX_DELAY);
+    led_off(LED_GREEN);
+    led_on(LED_YELLOW);
     test_debug_printf("CYCLE #%lu: YELLOW ON\r\n", cycle);
     move_LCD(0, 1);
     wr_str_LCD((INT8U*)"YELLOW ON");
-    vTaskDelay(500 / portTICK_RATE_MS);
+    vTaskDelayUntil(&xLastWakeTime, 500 / portTICK_RATE_MS);
 
     /* Red ON */
-    xQueueSend(yellowQueue, &led_off_value, portMAX_DELAY);
-    xQueueSend(redQueue, &led_on_value, portMAX_DELAY);
+    led_off(LED_YELLOW);
+    led_on(LED_RED);
     test_debug_printf("CYCLE #%lu: RED ON\r\n", cycle);
     move_LCD(0, 1);
     wr_str_LCD((INT8U*)"RED ON");
-    vTaskDelay(500 / portTICK_RATE_MS);
+    vTaskDelayUntil(&xLastWakeTime, 500 / portTICK_RATE_MS);
 
     /* All OFF */
-    xQueueSend(redQueue, &led_off_value, portMAX_DELAY);
+    led_off(LED_RED);
     test_debug_printf("CYCLE #%lu: ALL OFF\r\n", cycle);
     move_LCD(0, 1);
     wr_str_LCD((INT8U*)"ALL OFF");
-    vTaskDelay(500 / portTICK_RATE_MS);
+    vTaskDelayUntil(&xLastWakeTime, 500 / portTICK_RATE_MS);
 
     cycle++;
   }

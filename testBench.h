@@ -16,7 +16,6 @@ void test_lcd_display(void *pvParameters);
 void test_uart_echo(void *pvParameters);
 void test_button_press(void *pvParameters);
 void test_color_led(void *pvParameters);
-void led_task(void *pvParameters);
 
 /* Utility for debug output via UART */
 void test_debug_printf(const char *fmt, ...);

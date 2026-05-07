@@ -137,7 +137,6 @@ int main(void)
     
     /* Test 5: Color LEDs cycle through Green -> Yellow -> Red */
     // xTaskCreate( test_color_led, "TEST_CLED", USERTASK_STACK_SIZE, NULL, LOW_PRIO, NULL);
-    // xTaskCreate( led_task, "LED_TASK", USERTASK_STACK_SIZE, NULL, LOW_PRIO, NULL);
     
     /* Support tasks (required for most tests) */
     xTaskCreate( uart_tx_task, "UART_TX", USERTASK_STACK_SIZE, NULL, LOW_PRIO, NULL );
