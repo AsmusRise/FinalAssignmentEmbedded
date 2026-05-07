@@ -11,9 +11,7 @@
 #include "task.h"
 #include "queue.h"
 #include "semphr.h"
-#include "status_led.h"
 #include "color_led.h"
-#include "adc.h"
 #include "encoder.h"
 #include "key.h"
 #include "logger.h"
@@ -44,8 +42,6 @@ static void setupHardware(void)
   uart0_init(9600, 8, 1, 'n');
 }
 
-QueueHandle_t adc_queue;
-QueueHandle_t adc_to_uart_queue;
 SemaphoreHandle_t xSemaphore = NULL;
 
 QueueHandle_t button_queue1;
@@ -92,9 +88,7 @@ int main(void)
     timer2Semaphore = xSemaphoreCreateBinary();
     timer3Semaphore = xSemaphoreCreateBinary();
 
-    xTaskCreate( status_led_task, "Status_led", USERTASK_STACK_SIZE, NULL, LOW_PRIO, NULL );
-    xTaskCreate( adc_task, "ADC", USERTASK_STACK_SIZE, NULL, LOW_PRIO, NULL );
-
+    
     xTaskCreate( red_led_task, "red", USERTASK_STACK_SIZE, NULL, LOW_PRIO, NULL);
     xTaskCreate( green_led_task, "green", USERTASK_STACK_SIZE, NULL, LOW_PRIO, NULL);
     xTaskCreate( yellow_led_task, "yellow", USERTASK_STACK_SIZE, NULL, LOW_PRIO, NULL);
