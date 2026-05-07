@@ -37,7 +37,6 @@ static void setupHardware(void)
 
   // Warning: If you do not initialize the hardware clock, the timings will be inaccurate
   init_systick();
-  status_led_init();
   led_init();
   uart0_init(9600, 8, 1, 'n');
 }
