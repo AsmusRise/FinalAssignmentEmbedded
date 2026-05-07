@@ -107,7 +107,7 @@ INT32U logger_query_operating_time_sec(void)
  * Returns 1 if successful, 0 if buffer too small.
  * NOTE: Does NOT write to UART; caller is responsible for sending the formatted string.
  */
-BOOLEAN logger_format_transaction(transaction_t *rec, INT8U *buffer, INT16U buffer_len)
+BOOLEAN logger_format_transaction(transaction_t *rec, INT8U *buffer, INT8U buffer_len)
 {
   const char *product_names[] = {"FILTER", "LATTE", "ESPRESSO"};
   INT16U printed;
