@@ -46,7 +46,6 @@ static BOOLEAN uart_read_line(char *dst, INT16U dst_len)
 {
   INT16U idx = 0;
   INT8U ch = 0;
-  INT32U timeout_ticks = 500 / portTICK_RATE_MS;  /* 500ms per character */
 
   if(dst_len == 0)
   {
@@ -55,12 +54,9 @@ static BOOLEAN uart_read_line(char *dst, INT16U dst_len)
 
   while(1)
   {
-    /* Wait up to 500ms per character. Allows scheduler to run other tasks periodically. */
-    if(xQueueReceive(uart_rx_queue, &ch, timeout_ticks) != pdTRUE)
+    if(xQueueReceive(uart_rx_queue, &ch, 1000 / portTICK_RATE_MS) != pdTRUE)
     {
-      /* Timeout waiting for character. Return what we have so far (could be empty). */
-      dst[idx] = '\0';
-      return (idx > 0) ? 1 : 0;
+      return 0;
     }
 
     if(ch == '\r')
