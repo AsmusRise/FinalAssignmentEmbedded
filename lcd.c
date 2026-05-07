@@ -83,7 +83,7 @@ void wr_ctrl_LCD_low( INT8U Ch )
   INT8U temp;
   volatile int i;
 
-  uart0_putc('!'); /* debug: GPIO strobe happening */
+  /* debug: GPIO strobe removed */
   temp = GPIO_PORTC_DATA_R & 0x0F;
   temp  = temp | ((Ch & 0x0F) << 4);
   GPIO_PORTC_DATA_R  = temp;
@@ -340,16 +340,11 @@ void lcd_task( void *pvParameters )
       case LCD_INIT:
         if( LCD_init_sequense[LCD_init_idx] != 0xFF )
         {
-          /* debug: report init command */
-          uart0_putc('I');
-          uart_puthex(LCD_init_sequense[LCD_init_idx]);
-          uart0_putc('\n');
           wr_ctrl_LCD( LCD_init_sequense[LCD_init_idx++] );
         }
         else
         {
           state = LCD_READY;
-          uart0_putc('R'); /* debug: LCD_READY reached */
         }
         vTaskDelay( 100 / portTICK_RATE_MS );
         break;
@@ -360,16 +355,14 @@ void lcd_task( void *pvParameters )
           switch( ch )
           {
             case 0xFF:
-              uart0_putc('C'); uart_puthex(0xFF); uart0_putc('\n');
               clr_LCD();
               vTaskDelay(20 / portTICK_RATE_MS);
               break;
             case ESC:
-              uart0_putc('S'); uart_puthex(ch); uart0_putc('\n');
+              /* ESC received */
               state = LCD_ESC_RECEIVED;
               break;
             default:
-              uart0_putc('W'); uart_puthex(ch); uart0_putc('\n');
               out_LCD( ch );
               vTaskDelay(20 / portTICK_RATE_MS); // added delay which fixes strange behaviour on the lcd
           }
