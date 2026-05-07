@@ -33,6 +33,7 @@
 #include "FreeRTOS.h"
 #include "task.h"
 #include "queue.h"
+#include "uart0.h"
 
 /*****************************    Defines    *******************************/
 
@@ -317,7 +318,7 @@ void lcd_task( void *pvParameters )
 {
   INT8U ch;
   INT8U LCD_init_idx = 0;
-  enum LCD_states state = LCD_READY;
+  enum LCD_states state = LCD_POWER_UP;
 
   while(1)
   {
@@ -337,6 +338,7 @@ void lcd_task( void *pvParameters )
         else
         {
           state = LCD_READY;
+          uart0_putc('R'); /* debug: LCD_READY reached */
         }
         vTaskDelay( 100 / portTICK_RATE_MS );
         break;
