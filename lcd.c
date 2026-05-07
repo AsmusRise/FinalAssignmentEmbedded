@@ -38,9 +38,14 @@
 /* Helper: send a byte as two hex ASCII characters over UART for debugging */
 static void uart_puthex(INT8U v)
 {
-  static const INT8U hex[] = "0123456789ABCDEF";
-  uart0_putc(hex[(v >> 4) & 0x0F]);
-  uart0_putc(hex[v & 0x0F]);
+  INT8U high = (v >> 4) & 0x0F;
+  INT8U low = v & 0x0F;
+  
+  if (high < 10) uart0_putc((INT8U)('0' + high));
+  else uart0_putc((INT8U)('A' + high - 10));
+  
+  if (low < 10) uart0_putc((INT8U)('0' + low));
+  else uart0_putc((INT8U)('A' + low - 10));
 }
 
 /*****************************    Defines    *******************************/
