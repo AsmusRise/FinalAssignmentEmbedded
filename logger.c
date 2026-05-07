@@ -23,7 +23,7 @@
 
 // In-memory database: linear buffer of transaction records
 static transaction_t db[LOGGER_DB_SIZE];
-static INT16U db_count = 0;    /* current number of valid records */
+static INT8U db_count = 0;    /* current number of valid records */
 static INT32U db_first_time = 0; /* uptime of first transaction (for operating time calc) */
 
 // Transaction queue is created/defined by main.c
@@ -36,7 +36,7 @@ INT16U logger_db_count(void)
   return db_count;
 }
 
-BOOLEAN logger_db_get(INT16U index, transaction_t *out_record)
+BOOLEAN logger_db_get(INT8U index, transaction_t *out_record)
 {
   if(index >= db_count) return 0;
   *out_record = db[index];
@@ -51,7 +51,7 @@ BOOLEAN logger_db_is_full(void)
 INT64U logger_query_total_sales_by_product(INT8U product)
 {
   INT64U total_price = 0;
-  INT16U i;
+  INT8U i;
 
   for(i = 0; i < db_count; i++)
   {
@@ -67,7 +67,7 @@ INT64U logger_query_total_sales_by_product(INT8U product)
 INT64U logger_query_total_cash(void)
 {
   INT64U total_price = 0;
-  INT16U i;
+  INT8U i;
 
   for(i = 0; i < db_count; i++)
   {
@@ -83,7 +83,7 @@ INT64U logger_query_total_cash(void)
 INT64U logger_query_total_card(void)
 {
   INT64U total_price = 0;
-  INT16U i;
+  INT8U i;
 
   for(i = 0; i < db_count; i++)
   {

@@ -35,7 +35,7 @@ typedef struct {
   char   payment[17];      /* "CASH" or 16-digit card number + null terminator */
 } transaction_t;
 
-#define LOGGER_DB_SIZE 65535     /* maximum value of INT16U */
+#define LOGGER_DB_SIZE 255     /* maximum value of INT8U */
 
 /*****************************   Functions   *******************************/
 
@@ -44,8 +44,8 @@ extern QueueHandle_t transaction_queue;
 void log_task(void *pvParameters);
 
 /* Database query functions */
-INT16U logger_db_count(void);
-BOOLEAN logger_db_get(INT16U index, transaction_t *out_record);
+INT8U logger_db_count(void);
+BOOLEAN logger_db_get(INT8U index, transaction_t *out_record);
 BOOLEAN logger_db_is_full(void);
 
 /* Query functions for report generation */
@@ -55,6 +55,6 @@ INT64U logger_query_total_card(void);
 INT32U logger_query_operating_time_sec(void);
 
 /* Format transaction as string for UART output */
-BOOLEAN logger_format_transaction(transaction_t *rec, INT8U *buffer, INT16U buffer_len);
+BOOLEAN logger_format_transaction(transaction_t *rec, INT8U *buffer, INT8U buffer_len);
 
 #endif /* _LOGGER_H */
