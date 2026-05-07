@@ -15,6 +15,7 @@
 
 /*****************************    Defines    *******************************/
 #include "emp_type.h"
+#include "FreeRTOS.h"
 #include "queue.h"
 
 typedef struct
