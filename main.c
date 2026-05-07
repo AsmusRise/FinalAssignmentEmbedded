@@ -12,6 +12,7 @@
 #include "queue.h"
 #include "semphr.h"
 #include "color_led.h"
+#include "status_led.h"
 #include "encoder.h"
 #include "key.h"
 #include "logger.h"
@@ -43,7 +44,7 @@ static void setupHardware(void)
   // TODO: Put hardware configuration and initialisation in here
 
   // Warning: If you do not initialize the hardware clock, the timings will be inaccurate
-  
+
   status_led_init();
   init_systick();
   led_init();
@@ -88,6 +89,7 @@ int main(void)
     uart_rx_queue = xQueueCreate(128, sizeof(INT8U));
     transaction_queue = xQueueCreate(1, sizeof(transaction_t));
     timerCommandQueue = xQueueCreate(8, sizeof(timer_command_t));
+
 
     //create the mutex
     xSemaphore = xSemaphoreCreateMutex();
