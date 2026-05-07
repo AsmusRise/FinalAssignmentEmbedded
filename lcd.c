@@ -267,19 +267,36 @@ void lcd_test_task( void *pvParameters )
 {
   (void)pvParameters;
 
-  clr_LCD();
-  move_LCD(0,0);
-  wr_str_LCD((INT8U*)"hello");
-  move_LCD(0,1);
-  wr_str_LCD((INT8U*)"world");
-
-    /* allow time for lcd_task to process all queued characters */
+  /* Give lcd_task time to initialize */
+  uart0_putc('A');  /* debug: task started */
   vTaskDelay(2000 / portTICK_RATE_MS);
 
-  /* Loop forever - keep task alive for observation */
+  uart0_putc('B');  /* debug: about to clr_LCD */
+  clr_LCD();
+  vTaskDelay(100 / portTICK_RATE_MS);
+
+  uart0_putc('C');  /* debug: about to move(0,0) */
+  move_LCD(0,0);
+  vTaskDelay(100 / portTICK_RATE_MS);
+
+  uart0_putc('D');  /* debug: about to wr_str hello */
+  wr_str_LCD((INT8U*)"hello");
+  vTaskDelay(500 / portTICK_RATE_MS);
+
+  uart0_putc('E');  /* debug: about to move(0,1) */
+  move_LCD(0,1);
+  vTaskDelay(100 / portTICK_RATE_MS);
+
+  uart0_putc('F');  /* debug: about to wr_str world */
+  wr_str_LCD((INT8U*)"world");
+  vTaskDelay(500 / portTICK_RATE_MS);
+
+  uart0_putc('G');  /* debug: done, looping */
+
+  /* Loop forever */
   while(1)
   {
-    vTaskDelay(5000 / portTICK_RATE_MS); /* sleep 5 seconds */
+    vTaskDelay(5000 / portTICK_RATE_MS);
   }
 }
 
