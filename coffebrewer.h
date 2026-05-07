@@ -38,6 +38,8 @@ extern QueueHandle_t timerCommandQueue;
 #define FILTER_COFFEE_BREWING 9
 #define TAKE_CUP 10
 
+#define INITIAL_UART_STATE 11
+
 //product selection defines
 #define NO_SELECTION 0
 #define ESPRESSO 7 //same values as for the general state machine so we can just set brewerState to the selectedProduct.
@@ -64,9 +66,9 @@ extern QueueHandle_t timerCommandQueue;
 #define LEDON 1
 #define LEDOFF 0
 
-#define ESPRESSO_PRICE 15 //dkk
-#define LATTE_PRICE 27 //dkk
-#define FILTER_COFFEE_PRICE 3 //dkk pr cl
+#define DEFAULT_ESPRESSO_PRICE 15 //dkk
+#define DEFAULT_LATTE_PRICE 27 //dkk
+#define DEFAULT_FILTER_COFFEE_PRICE 3 //dkk pr cl
 
 
 
@@ -76,6 +78,13 @@ extern QueueHandle_t timerCommandQueue;
 
 void coffebrewer_task(void *pvParameters);
 void timer_task(void *pvParameters);
+
+extern INT16U espresso_price_dkk;
+extern INT16U latte_price_dkk;
+extern INT16U filter_price_per_cl_dkk;
+
+INT32U brewer_get_time_of_day_seconds(void);
+void brewer_get_time_of_day_hms(INT8U *hours, INT8U *minutes, INT8U *seconds);
 /****************************** End Of Module *******************************/
 
 #endif /*COFFEBREWER_H*/

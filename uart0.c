@@ -43,6 +43,179 @@ extern SemaphoreHandle_t xSemaphore;
 
 /*****************************   Functions   *******************************/
 
+static BOOLEAN uart_read_line(char *dst, INT16U dst_len)
+{
+  INT16U idx = 0;
+  INT8U ch = 0;
+
+  if(dst_len == 0)
+  {
+    return 0;
+  }
+
+  while(1)
+  {
+    if(xQueueReceive(uart_rx_queue, &ch, portMAX_DELAY) != pdTRUE)
+    {
+      return 0;
+    }
+
+    if(ch == '\r')
+    {
+      dst[idx] = '\0';
+      return 1;
+    }
+
+    if(ch == '\n')
+    {
+      continue;
+    }
+
+    if(idx < (dst_len - 1))
+    {
+      dst[idx] = (char)ch;
+      idx++;
+    }
+  }
+}
+
+static BOOLEAN parse_uint16_from_line(const char *line, INT16U *value, BOOLEAN *has_value)
+{
+  INT32U parsed = 0;
+  INT16U i = 0;
+
+  while(line[i] == ' ' || line[i] == '\t')
+  {
+    i++;
+  }
+
+  if(line[i] == '\0')
+  {
+    *has_value = 0;
+    return 1;
+  }
+
+  *has_value = 1;
+  while(line[i] >= '0' && line[i] <= '9')
+  {
+    parsed = (parsed * 10U) + (INT32U)(line[i] - '0');
+    if(parsed > 65535U)
+    {
+      return 0;
+    }
+    i++;
+  }
+
+  while(line[i] == ' ' || line[i] == '\t')
+  {
+    i++;
+  }
+
+  if(line[i] != '\0')
+  {
+    return 0;
+  }
+
+  *value = (INT16U)parsed;
+  return 1;
+}
+
+static BOOLEAN parse_hms_from_line(const char *line, INT32U *seconds_of_day, BOOLEAN *has_value)
+{
+  INT16U hh = 0;
+  INT16U mm = 0;
+  INT16U ss = 0;
+  INT16U i = 0;
+  char trailing = 0;
+
+  while(line[i] == ' ' || line[i] == '\t')
+  {
+    i++;
+  }
+
+  if(line[i] == '\0')
+  {
+    *has_value = 0;
+    return 1;
+  }
+
+  *has_value = 1;
+
+  if(sscanf(&line[i], "%hu:%hu:%hu %c", &hh, &mm, &ss, &trailing) != 3)
+  {
+    return 0;
+  }
+
+  if(hh > 23U || mm > 59U || ss > 59U)
+  {
+    return 0;
+  }
+
+  *seconds_of_day = (INT32U)hh * 3600U + (INT32U)mm * 60U + (INT32U)ss;
+  return 1;
+}
+
+void uart0_read_startup_config(INT16U *espresso_price,
+                               INT16U *latte_price,
+                               INT16U *filter_price,
+                               INT32U *time_of_day_seconds)
+{
+  char rx_line[32];
+  INT16U parsed_price = 0;
+  INT32U parsed_time_seconds = 0;
+  BOOLEAN has_value = 0;
+
+  xQueueReset(uart_rx_queue);
+
+  uart0_puts_selfmade((INT8U*)"Startup setup over UART");
+  uart0_puts_selfmade((INT8U*)"Send 4 lines, each ended by CR:");
+  uart0_puts_selfmade((INT8U*)"1) Espresso price DKK (empty=15)");
+  uart0_puts_selfmade((INT8U*)"2) Latte price DKK (empty=27)");
+  uart0_puts_selfmade((INT8U*)"3) Filter price DKK/cl (empty=3)");
+  uart0_puts_selfmade((INT8U*)"4) Time HH:MM:SS (empty=00:00:00)");
+
+  if(uart_read_line(rx_line, sizeof(rx_line)) == 1)
+  {
+    if(parse_uint16_from_line(rx_line, &parsed_price, &has_value) == 1 && has_value == 1 && espresso_price != NULL)
+    {
+      *espresso_price = parsed_price;
+    }
+  }
+
+  if(uart_read_line(rx_line, sizeof(rx_line)) == 1)
+  {
+    if(parse_uint16_from_line(rx_line, &parsed_price, &has_value) == 1 && has_value == 1 && latte_price != NULL)
+    {
+      *latte_price = parsed_price;
+    }
+  }
+
+  if(uart_read_line(rx_line, sizeof(rx_line)) == 1)
+  {
+    if(parse_uint16_from_line(rx_line, &parsed_price, &has_value) == 1 && has_value == 1 && filter_price != NULL)
+    {
+      *filter_price = parsed_price;
+    }
+  }
+
+  if(uart_read_line(rx_line, sizeof(rx_line)) == 1)
+  {
+    if(parse_hms_from_line(rx_line, &parsed_time_seconds, &has_value) == 1 && has_value == 1)
+    {
+      if(time_of_day_seconds != NULL)
+      {
+        *time_of_day_seconds = parsed_time_seconds;
+      }
+    }
+    else if(time_of_day_seconds != NULL)
+    {
+      *time_of_day_seconds = 0;
+    }
+  }
+
+  uart0_puts_selfmade((INT8U*)"UART setup complete.");
+}
+
 
 INT32U lcrh_databits( INT8U antal_databits )
 /*****************************************************************************

@@ -29,7 +29,14 @@ extern SemaphoreHandle_t timer1Semaphore;
 extern SemaphoreHandle_t timer2Semaphore;
 extern SemaphoreHandle_t timer3Semaphore;
 
-INT16U brewerState = PRODUCT_SELECT;
+INT16U brewerState = INITIAL_UART_STATE;
+INT16U espresso_price_dkk = DEFAULT_ESPRESSO_PRICE;
+INT16U latte_price_dkk = DEFAULT_LATTE_PRICE;
+INT16U filter_price_per_cl_dkk = DEFAULT_FILTER_COFFEE_PRICE;
+
+static INT32U time_of_day_base_seconds = 0;
+static TickType_t time_of_day_base_tick = 0;
+
 INT16U selectedProduct = 0;
 volatile INT16U timer1 = 0;
 volatile INT16U timer2 = 0;
@@ -51,6 +58,34 @@ FP32 perTickAmount = 0.0f;
 
 char line1[17];
 char line2[17];
+
+INT32U brewer_get_time_of_day_seconds(void)
+{
+    TickType_t now_tick = xTaskGetTickCount();
+    TickType_t elapsed_ticks = now_tick - time_of_day_base_tick;
+    INT32U elapsed_seconds = ((INT32U)elapsed_ticks * (INT32U)portTICK_RATE_MS) / 1000U;
+    INT32U seconds_of_day = (time_of_day_base_seconds + elapsed_seconds) % 86400U;
+    return seconds_of_day;
+}
+
+void brewer_get_time_of_day_hms(INT8U *hours, INT8U *minutes, INT8U *seconds)
+{
+    INT32U tod = brewer_get_time_of_day_seconds();
+
+    if(hours != NULL)
+    {
+        *hours = (INT8U)(tod / 3600U);
+    }
+    if( minutes != NULL)
+    {
+        *minutes = (INT8U)((tod % 3600U) / 60U);
+    }
+    if(seconds != NULL)
+    {
+        *seconds = (INT8U)(tod % 60U);
+    }
+}
+
 static void startTimer(INT8U timerID, INT16U ticks)
 {
     timer_command_t command = {timerID, ticks};
@@ -206,6 +241,37 @@ void coffebrewer_task(void *pvParameters)
     {
         switch (brewerState)
         {
+        case INITIAL_UART_STATE:
+        {
+            static BOOLEAN startup_config_done = 0;
+
+            displayUpdate("Coffee Brewer", "UART setup mode");
+
+            if(startup_config_done == 0)
+            {
+                time_of_day_base_seconds = 0;
+                uart0_read_startup_config(&espresso_price_dkk,
+                                          &latte_price_dkk,
+                                          &filter_price_per_cl_dkk,
+                                          &time_of_day_base_seconds);
+
+                time_of_day_base_tick = xTaskGetTickCount();
+
+                snprintf(line1, sizeof(line1), "E:%u L:%u F:%u",
+                         (unsigned)espresso_price_dkk,
+                         (unsigned)latte_price_dkk,
+                         (unsigned)filter_price_per_cl_dkk);
+                INT32U tod = brewer_get_time_of_day_seconds();
+                snprintf(line2, sizeof(line2), "T:%02u:%02u:%02u",
+                         (unsigned)(tod / 3600U),
+                         (unsigned)((tod % 3600U) / 60U),
+                         (unsigned)(tod % 60U));
+                displayUpdate((INT8U*)line1, (INT8U*)line2);
+                startup_config_done = 1;
+                brewerState = PRODUCT_SELECT;
+            }
+            break;
+        }
         case PRODUCT_SELECT:
             //Reset all variables to default
             xQueueReset(key_queue);
@@ -465,10 +531,10 @@ void coffebrewer_task(void *pvParameters)
                         switch (selectedProduct)
                         {
                         case ESPRESSO:
-                            if (cashInserted >= ESPRESSO_PRICE)
+                            if (cashInserted >= espresso_price_dkk)
                             {
                                 //payment successful, update display and move to brewing state
-                                cashInserted -= ESPRESSO_PRICE; //calculate change to be given
+                                cashInserted -= espresso_price_dkk; //calculate change to be given
                                 give_change();
                                 brewerState = CUP_PRESENCE;
                             } else {
@@ -477,10 +543,10 @@ void coffebrewer_task(void *pvParameters)
                             }
                             break;
                         case LATTE:
-                            if (cashInserted >= LATTE_PRICE)
+                            if (cashInserted >= latte_price_dkk)
                             {
                                 //payment successful, update display and move to brewing state
-                                cashInserted -= LATTE_PRICE; //calculate change to be given
+                                cashInserted -= latte_price_dkk; //calculate change to be given
                                 give_change();
                                 brewerState =  CUP_PRESENCE;
                             } else {
@@ -661,9 +727,9 @@ void coffebrewer_task(void *pvParameters)
                         {
                             startTimer(TIMER2, INACTIVITY_TIME);
                             coffeeDispensed += perTickAmount; 
-                            remaining_cash -= perTickAmount * FILTER_COFFEE_PRICE;
-                            snprintf(line1, sizeof(line1), "Amt: %3.0f cl U: %1.0f", coffeeDispensed, FILTER_COFFEE_PRICE);
-                            snprintf(line2, sizeof(line2), "Total: $%4.1f", coffeeDispensed * FILTER_COFFEE_PRICE);
+                            remaining_cash -= perTickAmount * filter_price_per_cl_dkk;
+                            snprintf(line1, sizeof(line1), "Amt: %3.0f cl U: %1.0f", coffeeDispensed, filter_price_per_cl_dkk);
+                            snprintf(line2, sizeof(line2), "Total: $%4.1f", coffeeDispensed * filter_price_per_cl_dkk);
                             displayUpdate((INT8U *)line1, (INT8U *)line2);
                         }
                     }
@@ -683,9 +749,9 @@ void coffebrewer_task(void *pvParameters)
                             startTimer(TIMER2, INACTIVITY_TIME);
                             
                             coffeeDispensed += perTickAmount; 
-                            remaining_cash -= perTickAmount * FILTER_COFFEE_PRICE;
-                            snprintf(line1, sizeof(line1), "Amt: %3.0f cl U: %1.0f", coffeeDispensed, FILTER_COFFEE_PRICE);
-                            snprintf(line2, sizeof(line2), "Total: $%4.1f", coffeeDispensed * FILTER_COFFEE_PRICE);
+                            remaining_cash -= perTickAmount * filter_price_per_cl_dkk;
+                            snprintf(line1, sizeof(line1), "Amt: %3.0f cl U: %1.0f", coffeeDispensed, filter_price_per_cl_dkk);
+                            snprintf(line2, sizeof(line2), "Total: $%4.1f", coffeeDispensed * filter_price_per_cl_dkk);
                             displayUpdate((INT8U *)line1, (INT8U *)line2);
                         }
                     }
@@ -706,8 +772,8 @@ void coffebrewer_task(void *pvParameters)
                             {
                                 startTimer(TIMER2, INACTIVITY_TIME);
                                 coffeeDispensed += perTickAmount;
-                                cardSumToPay += perTickAmount * FILTER_COFFEE_PRICE; //update the sum to pay based on how much coffee they have dispensed
-                                snprintf(line1, sizeof(line1), "Amt: %3.0f cl U: %1.0f", coffeeDispensed, FILTER_COFFEE_PRICE);
+                                cardSumToPay += perTickAmount * filter_price_per_cl_dkk; //update the sum to pay based on how much coffee they have dispensed
+                                snprintf(line1, sizeof(line1), "Amt: %3.0f cl U: %1.0f", coffeeDispensed, filter_price_per_cl_dkk);
                                 snprintf(line2, sizeof(line2), "Total: $%4.1f", cardSumToPay);
                                 displayUpdate((INT8U *)line1, (INT8U *)line2);
                             }
@@ -727,8 +793,8 @@ void coffebrewer_task(void *pvParameters)
                             startTimer(TIMER2, INACTIVITY_TIME);
                             
                             coffeeDispensed += perTickAmount; 
-                            cardSumToPay += perTickAmount * FILTER_COFFEE_PRICE; //update the sum to pay based on how much coffee they have dispensed
-                            snprintf(line1, sizeof(line1), "Amt: %3.0f cl U: %1.0f", coffeeDispensed, FILTER_COFFEE_PRICE);
+                            cardSumToPay += perTickAmount * filter_price_per_cl_dkk; //update the sum to pay based on how much coffee they have dispensed
+                            snprintf(line1, sizeof(line1), "Amt: %3.0f cl U: %1.0f", coffeeDispensed, filter_price_per_cl_dkk);
                             snprintf(line2, sizeof(line2), "Total: $%4.1f", cardSumToPay);
                             displayUpdate((INT8U *)line1, (INT8U *)line2);
                         }

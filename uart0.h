@@ -72,6 +72,11 @@ extern void uart0_init( INT32U, INT8U, INT8U, INT8U );
 *   Function : Initialize uart 0
 ******************************************************************************/
 
+void uart0_read_startup_config(INT16U *espresso_price,
+                               INT16U *latte_price,
+                               INT16U *filter_price,
+                               INT32U *time_of_day_seconds);
+
 void uart_tx_task( void *pvParameters );
 /*****************************************************************************
 *   Function : FreeRTOS task - sends bytes from uart_tx_queue to hardware
