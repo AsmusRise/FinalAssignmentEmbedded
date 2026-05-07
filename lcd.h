@@ -40,14 +40,6 @@
 
 /*****************************   Functions   *******************************/
 
-void lcd_init(void);
-/*****************************************************************************
-*   Input    : -
-*   Output   : -
-*   Function : Initialize LCD hardware. Must be called before lcd_task()
-*              and before starting the FreeRTOS scheduler.
-*****************************************************************************/
-
 INT8U wr_ch_LCD( INT8U Ch );
 /*****************************************************************************
 *   Input    : Character to write

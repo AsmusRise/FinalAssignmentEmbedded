@@ -38,6 +38,8 @@
 
 enum LCD_states
 {
+  LCD_POWER_UP,
+  LCD_INIT,
   LCD_READY,
   LCD_ESC_RECEIVED,
 };
@@ -61,7 +63,6 @@ const INT8U LCD_init_sequense[]=
 /*****************************   Variables   *******************************/
 
 extern QueueHandle_t lcd_queue;
-static INT8U Mode4bit = 0;
 
 /*****************************   Functions   *******************************/
 
@@ -134,6 +135,7 @@ void wr_ctrl_LCD( INT8U Ch )
 *   Function : Write control data to LCD. Handles 8-bit to 4-bit transition.
 ******************************************************************************/
 {
+  static INT8U Mode4bit = 0;
   INT16U i;
 
   wr_ctrl_LCD_high( Ch );
@@ -193,43 +195,6 @@ void out_LCD( INT8U Ch )
   out_LCD_low( Ch );
 }
 
-void lcd_init(void)
-/*****************************************************************************
-*   Input    : -
-*   Output   : -
-*   Function : Initialize LCD hardware. Must be called before lcd_task().
-*              This initializes GPIO and runs the LCD power-up sequence.
-******************************************************************************/
-{
-  volatile int i;
-  INT8U init_idx;
-
-  /* Enable GPIO ports C and D */
-  SYSCTL_RCGC2_R |= SYSCTL_RCGC2_GPIOC | SYSCTL_RCGC2_GPIOD;
-  for(i=0; i<1000; i++);  /* Dummy read for clock enable */
-
-  /* Configure Port C: PC4-PC7 as outputs (data lines D4-D7) */
-  GPIO_PORTC_DIR_R |= 0xF0;
-  GPIO_PORTC_DEN_R |= 0xF0;
-  GPIO_PORTC_AFSEL_R &= ~0xF0;
-  GPIO_PORTC_AMSEL_R &= ~0xF0;
-
-  /* Configure Port D: PD2 as output (RS), PD3 as output (EN) */
-  GPIO_PORTD_DIR_R |= 0x0C;
-  GPIO_PORTD_DEN_R |= 0x0C;
-  GPIO_PORTD_AFSEL_R &= ~0x0C;
-  GPIO_PORTD_AMSEL_R &= ~0x0C;
-
-  /* Run LCD initialization sequence with delays */
-  for(init_idx = 0; LCD_init_sequense[init_idx] != 0xFF; init_idx++)
-  {
-    wr_ctrl_LCD(LCD_init_sequense[init_idx]);
-    for(i=0; i<100000; i++);  /* Delay ~100ms at typical clock speed */
-  }
-
-  Mode4bit = 1;  /* Mark that 4-bit mode is now active */
-}
-
 /*****************************  Public API  ********************************/
 
 INT8U wr_ch_LCD( INT8U Ch )
@@ -272,9 +237,8 @@ void lcd_task( void *pvParameters )
 /*****************************************************************************
 *   Input    : pvParameters (unused)
 *   Output   : -
-*   Function : FreeRTOS task that processes characters from lcd_queue.
-*              Initialization is handled by lcd_init() which must be called
-*              before starting the scheduler.
+*   Function : FreeRTOS task that initialises the LCD and then processes
+*              characters from lcd_queue.
 *
 *              Send ESC followed by a DDRAM address (0x80|pos) to move cursor.
 *              Send ESC followed by '@' to home.
@@ -283,12 +247,31 @@ void lcd_task( void *pvParameters )
 *****************************************************************************/
 {
   INT8U ch;
-  enum LCD_states state = LCD_READY;
+  INT8U LCD_init_idx = 0;
+  enum LCD_states state = LCD_POWER_UP;
 
   while(1)
   {
     switch( state )
     {
+      case LCD_POWER_UP:
+        LCD_init_idx = 0;
+        state = LCD_INIT;
+        vTaskDelay( 100 / portTICK_RATE_MS );
+        break;
+
+      case LCD_INIT:
+        if( LCD_init_sequense[LCD_init_idx] != 0xFF )
+        {
+          wr_ctrl_LCD( LCD_init_sequense[LCD_init_idx++] );
+        }
+        else
+        {
+          state = LCD_READY;
+        }
+        vTaskDelay( 100 / portTICK_RATE_MS );
+        break;
+
       case LCD_READY:
         if( xQueueReceive( lcd_queue, &ch, portMAX_DELAY ) == pdTRUE )
         {
@@ -325,10 +308,6 @@ void lcd_task( void *pvParameters )
           state = LCD_READY;
           vTaskDelay( 10 / portTICK_RATE_MS );
         }
-        break;
-
-      default:
-        state = LCD_READY;
         break;
     }
   }
