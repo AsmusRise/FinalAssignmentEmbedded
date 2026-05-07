@@ -49,7 +49,7 @@ BOOLEAN logger_db_get(INT16U index, transaction_t *out_record);
 BOOLEAN logger_db_is_full(void);
 
 /* Query functions for report generation */
-INT32U logger_query_total_sales_by_product(INT8U product);
+INT64U logger_query_total_sales_by_product(INT8U product);
 INT64U logger_query_total_cash(void);
 INT64U logger_query_total_card(void);
 INT32U logger_query_operating_time_sec(void);
