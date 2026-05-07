@@ -27,7 +27,7 @@ extern SemaphoreHandle_t timer2Semaphore;
 extern SemaphoreHandle_t timer3Semaphore;
 
 void waitForTimer(INT8U timerID);
-void displayUpdate(INT8U *line1, INT8U *line2);
+void displayUpdate(const char *line1, const char *line2);
 BOOLEAN selectConfirm(void);
 
 INT16U brewerState = INITIAL_UART_STATE;
@@ -57,8 +57,8 @@ FP32 coffeeRate = 0.6f;
 FP32 remaining_cash = 0.0f;
 FP32 perTickAmount = 0.0f;
 
-INT8U line1[17];
-INT8U line2[17];
+char line1[17];
+char line2[17];
 
 INT32U brewer_get_time_of_day_seconds(void)
 {
@@ -189,15 +189,15 @@ void waitForTimer(INT8U timerID)
 }
 
 //function to print to display
-void displayUpdate(INT8U *line1, INT8U *line2)
+void displayUpdate(const char *line1, const char *line2)
 {
     char buf1[17];
     char buf2[17];
     static char prev1[17] = "";
     static char prev2[17] = "";
 
-    if(line1 == NULL) line1 = (INT8U*)"";
-    if(line2 == NULL) line2 = (INT8U*)"";
+    if(line1 == NULL) line1 = "";
+    if(line2 == NULL) line2 = "";
 
     /* copy and ensure NUL-termination, limit to 16 chars for 16x2 LCD */
     strncpy(buf1, (char *)line1, 16);
@@ -272,7 +272,7 @@ void coffebrewer_task(void *pvParameters)
                          (unsigned)(tod / 3600U),
                          (unsigned)((tod % 3600U) / 60U),
                          (unsigned)(tod % 60U));
-                displayUpdate((INT8U*)line1, (INT8U*)line2);
+                displayUpdate(line1, line2);
                 startup_config_done = 1;
                 brewerState = PRODUCT_SELECT;
             }
@@ -520,7 +520,7 @@ void coffebrewer_task(void *pvParameters)
                 {
                     //update display with current sum
                     snprintf(line1, sizeof(line1), "%u", (unsigned)cashInserted);
-                    displayUpdate("Current cash inserted:", (INT8U *)line1);
+                    displayUpdate("Current cash inserted:", line1);
                     if(key_buffer == 1)
                     {
                         cashInserted += 20;
@@ -736,7 +736,7 @@ void coffebrewer_task(void *pvParameters)
                             remaining_cash -= perTickAmount * filter_price_per_cl_dkk;
                             snprintf(line1, sizeof(line1), "Amt: %3.0f cl U: %1u", (double)coffeeDispensed, (unsigned)filter_price_per_cl_dkk);
                             snprintf(line2, sizeof(line2), "Total: $%4.1f", coffeeDispensed * filter_price_per_cl_dkk);
-                            displayUpdate((INT8U *)line1, (INT8U *)line2);
+                            displayUpdate(line1, line2);
                         }
                     }
                     startTimer(TIMER3, 1);
@@ -758,7 +758,7 @@ void coffebrewer_task(void *pvParameters)
                             remaining_cash -= perTickAmount * filter_price_per_cl_dkk;
                             snprintf(line1, sizeof(line1), "Amt: %3.0f cl U: %1u", (double)coffeeDispensed, (unsigned)filter_price_per_cl_dkk);
                             snprintf(line2, sizeof(line2), "Total: $%4.1f", coffeeDispensed * filter_price_per_cl_dkk);
-                            displayUpdate((INT8U *)line1, (INT8U *)line2);
+                            displayUpdate(line1, line2);
                         }
                     }
                     startTimer(TIMER3, 1);
@@ -781,7 +781,7 @@ void coffebrewer_task(void *pvParameters)
                                 cardSumToPay += perTickAmount * filter_price_per_cl_dkk; //update the sum to pay based on how much coffee they have dispensed
                                 snprintf(line1, sizeof(line1), "Amt: %3.0f cl U: %1u", (double)coffeeDispensed, (unsigned)filter_price_per_cl_dkk);
                                 snprintf(line2, sizeof(line2), "Total: $%4.1f", cardSumToPay);
-                                displayUpdate((INT8U *)line1, (INT8U *)line2);
+                                displayUpdate(line1, line2);
                             }
                         }
                     startTimer(TIMER3, 1);
@@ -802,7 +802,7 @@ void coffebrewer_task(void *pvParameters)
                             cardSumToPay += perTickAmount * filter_price_per_cl_dkk; //update the sum to pay based on how much coffee they have dispensed
                             snprintf(line1, sizeof(line1), "Amt: %3.0f cl U: %1u", (double)coffeeDispensed, (unsigned)filter_price_per_cl_dkk);
                             snprintf(line2, sizeof(line2), "Total: $%4.1f", cardSumToPay);
-                            displayUpdate((INT8U *)line1, (INT8U *)line2);
+                            displayUpdate(line1, line2);
                         }
                         }
                     startTimer(TIMER3, 1);
