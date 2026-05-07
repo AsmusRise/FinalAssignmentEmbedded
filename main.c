@@ -90,26 +90,26 @@ int main(void)
 
     
     xTaskCreate( status_led_task, "status_led", USERTASK_STACK_SIZE, NULL, LOW_PRIO, NULL);
-    //xTaskCreate( encoder_task, "encoder", USERTASK_STACK_SIZE, NULL, LOW_PRIO, NULL);
-    //xTaskCreate( key_task, "key", USERTASK_STACK_SIZE, NULL, LOW_PRIO, NULL);
+    xTaskCreate( encoder_task, "encoder", USERTASK_STACK_SIZE, NULL, LOW_PRIO, NULL);
+    xTaskCreate( key_task, "key", USERTASK_STACK_SIZE, NULL, LOW_PRIO, NULL);
 
     /* Start LCD service task and a one-shot test task */
     xTaskCreate( lcd_task, "LCD", USERTASK_STACK_SIZE, NULL, LOW_PRIO, NULL );
-    xTaskCreate( lcd_test_task, "LCD_TEST", USERTASK_STACK_SIZE, NULL, LOW_PRIO, NULL );
+    //xTaskCreate( lcd_test_task, "LCD_TEST", USERTASK_STACK_SIZE, NULL, LOW_PRIO, NULL );
 
-    //xTaskCreate( uart_tx_task, "UART_TX", USERTASK_STACK_SIZE, NULL, LOW_PRIO, NULL );
-    //xTaskCreate( uart_rx_task, "UART_RX", USERTASK_STACK_SIZE, NULL, LOW_PRIO, NULL );
+    xTaskCreate( uart_tx_task, "UART_TX", USERTASK_STACK_SIZE, NULL, LOW_PRIO, NULL );
+    xTaskCreate( uart_rx_task, "UART_RX", USERTASK_STACK_SIZE, NULL, LOW_PRIO, NULL );
 
     //button tasks
-    //xTaskCreate( button_1_Task, "Button1", USERTASK_STACK_SIZE, NULL, LOW_PRIO, NULL );
-    //xTaskCreate( button_2_Task, "Button2", USERTASK_STACK_SIZE, NULL, LOW_PRIO, NULL );
+    xTaskCreate( button_1_Task, "Button1", USERTASK_STACK_SIZE, NULL, LOW_PRIO, NULL );
+    xTaskCreate( button_2_Task, "Button2", USERTASK_STACK_SIZE, NULL, LOW_PRIO, NULL );
 
     // tasks for the coffebrewer
-    //xTaskCreate( timer_task, "timer", USERTASK_STACK_SIZE, NULL, LOW_PRIO, NULL );
-    //xTaskCreate( coffebrewer_task, "coffebrewer", USERTASK_STACK_SIZE, NULL, LOW_PRIO, NULL );
+    xTaskCreate( timer_task, "timer", USERTASK_STACK_SIZE, NULL, LOW_PRIO, NULL );
+    xTaskCreate( coffebrewer_task, "coffebrewer", USERTASK_STACK_SIZE, NULL, LOW_PRIO, NULL );
 
     // logging task
-    //xTaskCreate( log_task, "logger", USERTASK_STACK_SIZE, NULL, LOW_PRIO, NULL );
+    xTaskCreate( log_task, "logger", USERTASK_STACK_SIZE, NULL, LOW_PRIO, NULL );
 
     vTaskStartScheduler();
 	return 0;

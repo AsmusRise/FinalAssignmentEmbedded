@@ -215,15 +215,21 @@ void displayUpdate(const char *line1, const char *line2)
     strncpy(prev1, buf1, 17);
     strncpy(prev2, buf2, 17);
 
+    /* debug: entering display update */
+    uart0_putc('x');
+
     clr_LCD();
     move_LCD(0,0);
     wr_str_LCD((INT8U*)buf1);
     move_LCD(0,1);
     wr_str_LCD((INT8U*)buf2);
+    /* debug: display update complete */
+    uart0_putc('y');
 }
 
 BOOLEAN selectConfirm(void)
 {
+    uart0_putc('z');
     while(xQueueReceive(key_queue, &key_buffer, portMAX_DELAY) == pdTRUE)
     {
         if(key_buffer == '#')
@@ -258,10 +264,14 @@ void coffebrewer_task(void *pvParameters)
             if(startup_config_done == 0)
             {
                 time_of_day_base_seconds = 0;
+                /* debug: before UART startup config */
+                uart0_putc('p');
                 uart0_read_startup_config(&espresso_price_dkk,
                                           &latte_price_dkk,
                                           &filter_price_per_cl_dkk,
                                           &time_of_day_base_seconds);
+                /* debug: after UART startup config */
+                uart0_putc('q');
 
                 time_of_day_base_tick = xTaskGetTickCount();
 
@@ -295,6 +305,8 @@ void coffebrewer_task(void *pvParameters)
             keyCounter = 0;
             displayUpdate("Select Product:", "1:Espresso 2:Latte 3:Filter Coffee");
 
+            /* debug: about to wait for product select */
+            uart0_putc('A');
             if(xQueueReceive(key_queue,  &key_buffer, portMAX_DELAY) == pdTRUE)
             {
 
@@ -338,12 +350,16 @@ void coffebrewer_task(void *pvParameters)
                     break;
                 }
             }
+            /* debug: leaving PRODUCT_SELECT */
+            uart0_putc('a');
             break;
         case PAYMENT_SELECT:
             //update display
             xQueueReset(key_queue);
             displayUpdate("Select Payment:", "1:Card 2:Cash");
 
+            /* debug: about to wait for payment select */
+            uart0_putc('B');
             if(xQueueReceive(key_queue,  &key_buffer, portMAX_DELAY) == pdTRUE)
             {
 
@@ -373,12 +389,16 @@ void coffebrewer_task(void *pvParameters)
                     break;
                 }
             }
+            /* debug: leaving PAYMENT_SELECT */
+            uart0_putc('b');
             break;
         case CARD_ENTRY:
             //update display
             xQueueReset(key_queue);
             displayUpdate("Insert Card:", "Enter Card Number:");
 
+            /* debug: about to wait for card entry */
+            uart0_putc('C');
             if(xQueueReceive(key_queue,  &key_buffer, portMAX_DELAY) == pdTRUE)
             {
                 switch (key_buffer)
@@ -451,6 +471,8 @@ void coffebrewer_task(void *pvParameters)
                     break;
                 }
             }
+            /* debug: leaving CARD_ENTRY */
+            uart0_putc('c');
             break;
         case PINCODE:
             //update display
@@ -458,6 +480,8 @@ void coffebrewer_task(void *pvParameters)
                 displayUpdate("Enter PIN Code:", "Use keypad, #: Confirm, *: Clear");
 
 
+            /* debug: about to wait for pincode */
+            uart0_putc('D');
             if(xQueueReceive(key_queue,  &key_buffer, portMAX_DELAY) == pdTRUE)
             {
                 switch (key_buffer)
@@ -511,6 +535,8 @@ void coffebrewer_task(void *pvParameters)
                     break;
                 }
             }
+            /* debug: leaving PINCODE */
+            uart0_putc('d');
             break;
         case CASH_ENTRY:
             //update display
@@ -581,18 +607,26 @@ void coffebrewer_task(void *pvParameters)
         case CUP_PRESENCE:
             //update display
             xQueueReset(button_queue1);
+            /* debug: waiting for cup presence */
+            uart0_putc('E');
             //wait for signal from "cup sensor" (aka button input)
             if(xQueueReceive(button_queue1, &key_buffer, portMAX_DELAY) == pdTRUE){ //just check if its been clicked
                 brewerState = READY_TO_BREW;
             }
+            /* debug: leaving CUP_PRESENCE */
+            uart0_putc('e');
             break;
         case READY_TO_BREW:
             //update display (waiting for start input)
             xQueueReset(button_queue2);
+            /* debug: waiting for ready to brew trigger */
+            uart0_putc('F');
             if(xQueueReceive(button_queue2,  &key_buffer, portMAX_DELAY) == pdTRUE)
             {
                 brewerState = selectedProduct; //move to brewing state based on selected product
             }
+            /* debug: leaving READY_TO_BREW */
+            uart0_putc('f');
             break;
         case ESPRESSO_BREWING:
             //update display with brewing status
@@ -858,10 +892,14 @@ void coffebrewer_task(void *pvParameters)
             }
             
             //wait for signal from "cup sensor" (aka button input) that cup has been taken
+            /* debug: waiting for take cup */
+            uart0_putc('G');
             if(xQueueReceive(button_queue1, &key_buffer, portMAX_DELAY) == pdTRUE){ //just check if its been clicked
                 brewerState = PRODUCT_SELECT; //back to start for next customer
                 transaction_logged = 0;
             }
+            /* debug: leaving TAKE_CUP */
+            uart0_putc('g');
             break;
 
         default:

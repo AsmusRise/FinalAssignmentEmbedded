@@ -371,7 +371,7 @@ void lcd_task( void *pvParameters )
             default:
               uart0_putc('W'); uart_puthex(ch); uart0_putc('\n');
               out_LCD( ch );
-              vTaskDelay(20 / portTICK_RATE_MS);
+              vTaskDelay(20 / portTICK_RATE_MS); // added delay which fixes strange behaviour on the lcd
           }
         }
         break;
