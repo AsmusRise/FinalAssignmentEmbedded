@@ -50,8 +50,6 @@ FP32 coffeeRate = 0.6f;
 FP32 remaining_cash = 0.0f;
 FP32 perTickAmount = 0.0f;
 
-transaction_t transaction;
-
 char line1[17];
 char line2[17];
 static void startTimer(INT8U timerID, INT16U ticks)
@@ -751,6 +749,7 @@ void coffebrewer_task(void *pvParameters)
             
             //Log the completed transaction
             {
+                transaction_t transaction;
                 TickType_t uptime_ticks = xTaskGetTickCount();
                 
                 // Convert ticks to seconds (assuming configTICK_RATE_HZ is defined in FreeRTOS config)
