@@ -31,7 +31,7 @@ extern QueueHandle_t transaction_queue;
 
 /*****************************   Functions   *******************************/
 
-INT16U logger_db_count(void)
+INT8U logger_db_count(void)
 {
   return db_count;
 }
