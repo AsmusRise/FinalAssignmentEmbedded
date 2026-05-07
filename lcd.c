@@ -83,6 +83,7 @@ void wr_ctrl_LCD_low( INT8U Ch )
   INT8U temp;
   volatile int i;
 
+  uart0_putc('!'); /* debug: GPIO strobe happening */
   temp = GPIO_PORTC_DATA_R & 0x0F;
   temp  = temp | ((Ch & 0x0F) << 4);
   GPIO_PORTC_DATA_R  = temp;
