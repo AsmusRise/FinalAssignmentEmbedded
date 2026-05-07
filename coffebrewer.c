@@ -132,6 +132,7 @@ void timer_task(void *pvParameters) //needs semaphores... (everywhere)
 {
     (void)pvParameters;
     TickType_t xLastWakeTime = xTaskGetTickCount();
+    displayUpdate(" ", " ");
     while(1)
     {
         timer_command_t command;
@@ -239,6 +240,7 @@ BOOLEAN selectConfirm(void)
 
 void coffebrewer_task(void *pvParameters)
 {
+
     INT16U i;
     static BOOLEAN transaction_logged = 0;
 
