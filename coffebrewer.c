@@ -573,9 +573,12 @@ void coffebrewer_task(void *pvParameters)
                     //update display with current sum
                     //snprintf(line1, sizeof(line1), "%u", (unsigned)cashInserted); //something is wrong witht the snprintf
                     //snprintf(line1, sizeof(line1), "%u", 15u); //just for testing
-                    u16_to_str(cashInserted, line1);
+                    wr_str_LCD(line1);
+                    u16_to_str(cashInserted, line1); // this works instead of snprintf for some reason. 
                     uart0_putc('k');
-                    displayUpdate("Current cash:", line1);
+
+                    //here i only want to update the last line. 
+                    wr_str_LCD(line1); //only update the second line. 
                     if(key_buffer == 1)
                     {
                         cashInserted += 20;
