@@ -77,6 +77,7 @@ extern QueueHandle_t timerCommandQueue;
 
 /*****************************   Functions   *******************************/
 
+void u16_to_str(INT16U value, char *str);
 void coffebrewer_task(void *pvParameters);
 void timer_task(void *pvParameters);
 

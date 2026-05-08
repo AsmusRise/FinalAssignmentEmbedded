@@ -60,6 +60,32 @@ FP32 perTickAmount = 0.0f;
 char line1[17];
 char line2[17];
 
+void u16_to_str(INT16U value, char *str)
+{
+    char temp[6];
+    INT8U i = 0;
+    INT8U j = 0;
+
+    if(value == 0)
+    {
+        str[0] = '0';
+        str[1] = '\0';
+        return;
+    }
+
+    while(value > 0 && i < sizeof(temp))
+    {
+        temp[i++] = (char)('0' + (value % 10U));
+        value /= 10U;
+    }
+
+    while(i > 0)
+    {
+        str[j++] = temp[--i];
+    }
+    str[j] = '\0';
+}
+
 INT32U brewer_get_time_of_day_seconds(void)
 {
     TickType_t now_tick = xTaskGetTickCount();
@@ -286,7 +312,7 @@ void coffebrewer_task(void *pvParameters)
             break;
         }
         case PRODUCT_SELECT:
-            leds_off();
+            //leds_off(); // doesnt work
             //Reset all variables to default
             xQueueReset(key_queue);
             selectedProduct = NO_SELECTION;
@@ -543,10 +569,11 @@ void coffebrewer_task(void *pvParameters)
                 if(xQueueReceive(encoder_queue, &key_buffer, 20) == pdTRUE) //dont wait indef cause be also need to keep track of confirm/cancel input from keypad
                 {
                     uart0_putc('K');
-                    leds_on();
+                    //leds_on(); // doesnt work, seems to crash, but the code gets to print 'k' to uart
                     //update display with current sum
                     //snprintf(line1, sizeof(line1), "%u", (unsigned)cashInserted); //something is wrong witht the snprintf
-                    snprintf(line1, sizeof(line1), "%u", 15u); //just for testing
+                    //snprintf(line1, sizeof(line1), "%u", 15u); //just for testing
+                    u16_to_str(cashInserted, line1);
                     uart0_putc('k');
                     displayUpdate("Current cash:", line1);
                     if(key_buffer == 1)
