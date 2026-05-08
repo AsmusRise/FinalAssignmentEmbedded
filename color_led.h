@@ -32,9 +32,7 @@ void leds_off(void);
 void leds_on(void);
 void led_init(void);
 
-void red_led_task(void *pvParameters);
-void green_led_task(void *pvParameters);
-void yellow_led_task(void *pvParameters);
+void led_task(void *pvParameters);
 
 
 /****************************** End Of Module *******************************/
