@@ -115,13 +115,20 @@ static void startTimer(INT8U timerID, INT16U ticks)
 
 void give_change(){
     BOOLEAN ok;
+    uart0_puts("GIVE_CHANGE: START\n");
+    uart0_putc('G');
     while(cashInserted > 0) //one coin at a time by flashing green led
     {
+        uart0_puts("GIVE_CHANGE: next coin loop\n");
+        uart0_putc('g');
         startTimer(TIMER1, LED_BLINK);
+        uart0_puts("GIVE_CHANGE: timer started, waiting...\n");
         waitForTimer(TIMER1);
+        uart0_puts("GIVE_CHANGE: timer fired, sending LED ON\n");
         xQueueSend(greenQueue, &(INT16U){LEDON}, portMAX_DELAY);
         startTimer(TIMER1, LED_BLINK);
         waitForTimer(TIMER1);
+        uart0_puts("GIVE_CHANGE: timer fired, sending LED OFF\n");
         xQueueSend(greenQueue, &(INT16U){LEDOFF}, portMAX_DELAY);
         cashInserted -= 1;
         //update display with remaining change
@@ -133,6 +140,8 @@ void give_change(){
         }
         displayUpdate(line1, line2);
     }
+    uart0_puts("GIVE_CHANGE: DONE\n");
+    uart0_putc('H');
 }
 
 void timer_task(void *pvParameters) //needs semaphores... (everywhere)
@@ -221,9 +230,14 @@ void displayUpdate(const char *line1, const char *line2)
     strncpy(prev1, buf1, 17);
     strncpy(prev2, buf2, 17);
 
-    clr_LCD();
+    /* Send clear command through queue (0xFF) instead of calling directly */
+    wr_ch_LCD(0xFF);
+    
+    /* Send move to (0,0) via queue */
     move_LCD(0,0);
     wr_str_LCD((INT8U*)buf1);
+    
+    /* Send move to (0,1) via queue */
     move_LCD(0,1);
     wr_str_LCD((INT8U*)buf2);
 }
@@ -289,6 +303,8 @@ void coffebrewer_task(void *pvParameters)
             leds_off();
             //Reset all variables to default
             xQueueReset(key_queue);
+            xQueueReset(button_queue1);
+            xQueueReset(button_queue2);
             selectedProduct = NO_SELECTION;
             paymentType = NO_SELECTION;
             cardNumber = 0;
@@ -535,11 +551,15 @@ void coffebrewer_task(void *pvParameters)
             uart0_putc('d');
             break;
         case CASH_ENTRY:
-            uart0_puts("CASH_ENTRY\n");
-            vTaskDelay(100 / portTICK_RATE_MS);
+        {
+            static BOOLEAN cash_entry_shown = 0;
             
-            //update display
-            displayUpdate("Insert Cash", "");
+            //update display only once when entering this state
+            if(cash_entry_shown == 0)
+            {
+                displayUpdate("Insert Cash", "");
+                cash_entry_shown = 1;
+            }
             
             //get input from encoder for payment amount
             if(xQueueReceive(encoder_queue, &key_buffer, 20) == pdTRUE)
@@ -609,31 +629,60 @@ void coffebrewer_task(void *pvParameters)
                     displayUpdate("Payment cancel.", "Giving change...");
                 }
                 }
+            
+            //reset flag when leaving CASH_ENTRY
+            if(brewerState != CASH_ENTRY)
+            {
+                cash_entry_shown = 0;
+            }
             break;
+        }
         case CUP_PRESENCE:
-            //update display
-            xQueueReset(button_queue1);
+        {
+            static BOOLEAN cup_display_shown = 0;
+            
+            //clear queue and display only once
+            if(cup_display_shown == 0)
+            {
+                xQueueReset(button_queue1);
+                displayUpdate("Place cup", "Press Button 1");
+                cup_display_shown = 1;
+            }
+            
             /* debug: waiting for cup presence */
             uart0_putc('E');
             //wait for signal from "cup sensor" (aka button input)
             if(xQueueReceive(button_queue1, &key_buffer, portMAX_DELAY) == pdTRUE){ //just check if its been clicked
                 brewerState = READY_TO_BREW;
+                cup_display_shown = 0;  //reset for next time
             }
             /* debug: leaving CUP_PRESENCE */
             uart0_putc('e');
             break;
+        }
         case READY_TO_BREW:
-            //update display (waiting for start input)
-            xQueueReset(button_queue2);
+        {
+            static BOOLEAN brew_display_shown = 0;
+            
+            //clear queue and display only once
+            if(brew_display_shown == 0)
+            {
+                xQueueReset(button_queue2);
+                displayUpdate("Ready to brew?", "Press Button 2");
+                brew_display_shown = 1;
+            }
+            
             /* debug: waiting for ready to brew trigger */
             uart0_putc('F');
             if(xQueueReceive(button_queue2,  &key_buffer, portMAX_DELAY) == pdTRUE)
             {
                 brewerState = selectedProduct; //move to brewing state based on selected product
+                brew_display_shown = 0;  //reset for next time
             }
             /* debug: leaving READY_TO_BREW */
             uart0_putc('f');
             break;
+        }
         case ESPRESSO_BREWING:
             //update display with brewing status
             displayUpdate("Espresso select", "Grinding beans...");

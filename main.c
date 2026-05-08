@@ -69,8 +69,8 @@ int main(void)
     setupHardware();
     //create a queue cabable of holding 1 INT16 U
 
-    button_queue1 = xQueueCreate(1, sizeof(INT16U));
-    button_queue2 = xQueueCreate(1, sizeof(INT16U));
+    button_queue1 = xQueueCreate(1, sizeof(INT8U));
+    button_queue2 = xQueueCreate(1, sizeof(INT8U));
     greenQueue = xQueueCreate(1, sizeof(INT16U));
     yellowQueue = xQueueCreate(1, sizeof(INT16U));
     redQueue = xQueueCreate(1, sizeof(INT16U));
