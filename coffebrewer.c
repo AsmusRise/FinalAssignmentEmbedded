@@ -122,7 +122,6 @@ void give_change(){
         xQueueSend(greenQueue, &(INT16U){LEDOFF}, portMAX_DELAY);
         cashInserted -= 1;
         //update display with remaining change
-        uart0_putc('J'); //debug print to check if we get here when giving change
         snprintf(line1, sizeof(line1), "Change: $%.2f", (float)cashInserted / 100.0f);
         line2[0] = '\0';
         displayUpdate(line1, line2);
@@ -287,6 +286,7 @@ void coffebrewer_task(void *pvParameters)
             break;
         }
         case PRODUCT_SELECT:
+            leds_off();
             //Reset all variables to default
             xQueueReset(key_queue);
             selectedProduct = NO_SELECTION;
@@ -542,10 +542,12 @@ void coffebrewer_task(void *pvParameters)
             //get input from encoder
                 if(xQueueReceive(encoder_queue, &key_buffer, 20) == pdTRUE) //dont wait indef cause be also need to keep track of confirm/cancel input from keypad
                 {
-                    uart0_putc('h'); //debug print to check if we get encoder input here
+                    uart0_putc('K');
+                    leds_on();
                     //update display with current sum
                     //snprintf(line1, sizeof(line1), "%u", (unsigned)cashInserted); //something is wrong witht the snprintf
-                    //snprintf(line1, sizeof(line1), "%u", 15u); //just for testing
+                    snprintf(line1, sizeof(line1), "%u", 15u); //just for testing
+                    uart0_putc('k');
                     displayUpdate("Current cash:", line1);
                     if(key_buffer == 1)
                     {
@@ -557,7 +559,6 @@ void coffebrewer_task(void *pvParameters)
                 }
                 if(xQueueReceive(key_queue,  &key_buffer, 20) == pdTRUE)
                 {
-                    uart0_putc('#'); //debug print to check if we get keypad input here
                     if(key_buffer == '#') //we are done with payment
                     {
                         
@@ -568,14 +569,10 @@ void coffebrewer_task(void *pvParameters)
                             {
                                 //payment successful, update display and move to brewing state
                                 cashInserted -= espresso_price_dkk; //calculate change to be given
-                                uart0_putc('I'); //debug print to check if we get here when payment is successful
                                 give_change();
-                                uart0_putc('i'); //debug print to check if we get here after giving change
                                 brewerState = CUP_PRESENCE;
                             } else {
                                 //not enough cash inserted, update display accordingly
-                                displayUpdate("Not enough cash", "Please insert more");
-                                
                                 //maybe we let them continue to insert cash instead of going back to product selection?
                             }
                             break;
@@ -588,7 +585,6 @@ void coffebrewer_task(void *pvParameters)
                                 brewerState =  CUP_PRESENCE;
                             } else {
                                 //not enough cash inserted, update display accordingly
-                                displayUpdate("Not enough cash", "Please insert more");
                                 //maybe we let them continue to insert cash instead of going back to product selection?
                             }
                             break;

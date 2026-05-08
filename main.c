@@ -92,6 +92,7 @@ int main(void)
     xTaskCreate( status_led_task, "status_led", USERTASK_STACK_SIZE, NULL, LOW_PRIO, NULL);
     xTaskCreate( encoder_task, "encoder", USERTASK_STACK_SIZE, NULL, LOW_PRIO, NULL);
     xTaskCreate( key_task, "key", USERTASK_STACK_SIZE, NULL, LOW_PRIO, NULL);
+    xTaskCreate(led_task, "led", USERTASK_STACK_SIZE, NULL, LOW_PRIO, NULL);
 
     /* Start LCD service task and a one-shot test task */
     xTaskCreate( lcd_task, "LCD", USERTASK_STACK_SIZE, NULL, LOW_PRIO, NULL );

@@ -45,6 +45,17 @@ extern QueueHandle_t redQueue;
 
 /*****************************   Functions   *******************************/
 
+//function to turn all the leds off
+void leds_off(void)
+{
+  GPIO_PORTF_DATA_R &= ~0x0E; // turn off all leds (PF1, PF2 and PF3)
+}
+
+void leds_on(void)
+{
+  GPIO_PORTF_DATA_R |= 0x0E; // turn on all leds (PF1, PF2 and PF3)
+}
+
 void led_init(void)
 /*****************************************************************************
 *   Input    : 	-

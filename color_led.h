@@ -28,7 +28,8 @@
 
 /*****************************   Functions   *******************************/
 
-
+void leds_off(void);
+void leds_on(void);
 void led_init(void);
 
 void red_led_task(void *pvParameters);
