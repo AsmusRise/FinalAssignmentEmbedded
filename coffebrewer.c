@@ -7,6 +7,7 @@
 #include "color_led.h"
 #include "key.h"
 #include "lcd.h"
+#include "formatter.h"
 #include "uart0.h"
 #include "logger.h"
 #include <string.h>
@@ -18,6 +19,8 @@ extern QueueHandle_t yellowQueue;
 extern QueueHandle_t redQueue;
 extern QueueHandle_t key_queue;
 extern QueueHandle_t lcd_queue;
+extern QueueHandle_t formatter_request_queue;
+extern QueueHandle_t formatter_reply_queue;
 extern QueueHandle_t uart_tx_queue;
 extern QueueHandle_t uart_rx_queue;
 extern QueueHandle_t encoder_queue;
@@ -247,33 +250,40 @@ static void startTimer(INT8U timerID, INT16U ticks)
 
 
 void give_change(){
+    BOOLEAN ok;
+    uart0_puts("GIVE_CHANGE: START\n");
+    uart0_putc('G');
     while(cashInserted > 0) //one coin at a time by flashing green led
     {
+        uart0_puts("GIVE_CHANGE: next coin loop\n");
+        uart0_putc('g');
         startTimer(TIMER1, LED_BLINK);
+        uart0_puts("GIVE_CHANGE: timer started, waiting...\n");
         waitForTimer(TIMER1);
+        uart0_puts("GIVE_CHANGE: timer fired, sending LED ON\n");
         xQueueSend(greenQueue, &(INT16U){LEDON}, portMAX_DELAY);
         startTimer(TIMER1, LED_BLINK);
         waitForTimer(TIMER1);
+        uart0_puts("GIVE_CHANGE: timer fired, sending LED OFF\n");
         xQueueSend(greenQueue, &(INT16U){LEDOFF}, portMAX_DELAY);
         cashInserted -= 1;
         //update display with remaining change
+        ok = formatter_format_change(cashInserted, line1, line2);
+        if(ok != pdTRUE)
         {
-            size_t pos = 0U;
-
             line1[0] = '\0';
-            append_str(line1, sizeof(line1), &pos, "Change: ");
-            append_money_from_cents(line1, sizeof(line1), &pos, (INT32U)cashInserted);
+            line2[0] = '\0';
         }
-        line2[0] = '\0';
         displayUpdate(line1, line2);
     }
+    uart0_puts("GIVE_CHANGE: DONE\n");
+    uart0_putc('H');
 }
 
 void timer_task(void *pvParameters) //needs semaphores... (everywhere)
 {
     (void)pvParameters;
     TickType_t xLastWakeTime = xTaskGetTickCount();
-    displayUpdate(" ", " ");
     while(1)
     {
         timer_command_t command;
@@ -333,8 +343,8 @@ void waitForTimer(INT8U timerID)
 //function to print to display
 void displayUpdate(const char *line1, const char *line2)
 {
-    char buf1[17];
-    char buf2[17];
+    static char buf1[17];
+    static char buf2[17];
     static char prev1[17] = "";
     static char prev2[17] = "";
 
@@ -356,10 +366,14 @@ void displayUpdate(const char *line1, const char *line2)
     strncpy(prev1, buf1, 17);
     strncpy(prev2, buf2, 17);
 
-
-    clr_LCD();
+    /* Send clear command through queue (0xFF) instead of calling directly */
+    wr_ch_LCD(0xFF);
+    
+    /* Send move to (0,0) via queue */
     move_LCD(0,0);
     wr_str_LCD((INT8U*)buf1);
+    
+    /* Send move to (0,1) via queue */
     move_LCD(0,1);
     wr_str_LCD((INT8U*)buf2);
 }
@@ -382,8 +396,8 @@ BOOLEAN selectConfirm(void)
 
 void coffebrewer_task(void *pvParameters)
 {
-
     INT16U i;
+    int ret;
     static BOOLEAN transaction_logged = 0;
 
     (void)pvParameters;
@@ -394,7 +408,6 @@ void coffebrewer_task(void *pvParameters)
         case INITIAL_UART_STATE:
         {
             static BOOLEAN startup_config_done = 0;
-
             displayUpdate("Coffee Brewer", "UART setup mode");
 
             if(startup_config_done == 0)
@@ -410,30 +423,12 @@ void coffebrewer_task(void *pvParameters)
                 uart0_putc('q');
 
                 time_of_day_base_tick = xTaskGetTickCount();
-
-                {
-                    size_t pos = 0U;
-
-                    line1[0] = '\0';
-                    append_str(line1, sizeof(line1), &pos, "E:");
-                    append_u16(line1, sizeof(line1), &pos, espresso_price_dkk);
-                    append_str(line1, sizeof(line1), &pos, " L:");
-                    append_u16(line1, sizeof(line1), &pos, latte_price_dkk);
-                    append_str(line1, sizeof(line1), &pos, " F:");
-                    append_u16(line1, sizeof(line1), &pos, filter_price_per_cl_dkk);
-                }
-                INT32U tod = brewer_get_time_of_day_seconds();
-                {
-                    size_t pos = 0U;
-
-                    line2[0] = '\0';
-                    append_str(line2, sizeof(line2), &pos, "T:");
-                    append_two_digits(line2, sizeof(line2), &pos, tod / 3600U);
-                    append_char(line2, sizeof(line2), &pos, ':');
-                    append_two_digits(line2, sizeof(line2), &pos, (tod % 3600U) / 60U);
-                    append_char(line2, sizeof(line2), &pos, ':');
-                    append_two_digits(line2, sizeof(line2), &pos, tod % 60U);
-                }
+                formatter_format_startup(espresso_price_dkk,
+                                     latte_price_dkk,
+                                     filter_price_per_cl_dkk,
+                                     brewer_get_time_of_day_seconds(),
+                                     line1,
+                                     line2);
                 displayUpdate(line1, line2);
                 startup_config_done = 1;
                 brewerState = PRODUCT_SELECT;
@@ -444,6 +439,8 @@ void coffebrewer_task(void *pvParameters)
             //leds_off(); // doesnt work
             //Reset all variables to default
             xQueueReset(key_queue);
+            xQueueReset(button_queue1);
+            xQueueReset(button_queue2);
             selectedProduct = NO_SELECTION;
             paymentType = NO_SELECTION;
             cardNumber = 0;
@@ -690,98 +687,138 @@ void coffebrewer_task(void *pvParameters)
             uart0_putc('d');
             break;
         case CASH_ENTRY:
-            //update display
-            displayUpdate("Insert Cash", "");
-            xQueueReset(key_queue);
-            xQueueReset(encoder_queue);
-            //get input from encoder
-                if(xQueueReceive(encoder_queue, &key_buffer, 20) == pdTRUE) //dont wait indef cause be also need to keep track of confirm/cancel input from keypad
+        {
+            static BOOLEAN cash_entry_shown = 0;
+            
+            //update display only once when entering this state
+            if(cash_entry_shown == 0)
+            {
+                displayUpdate("Insert Cash", "");
+                cash_entry_shown = 1;
+            }
+            
+            //get input from encoder for payment amount
+            if(xQueueReceive(encoder_queue, &key_buffer, 20) == pdTRUE)
+            {
+                leds_on();
+                if(key_buffer == 1)  // clockwise
                 {
-                    uart0_putc('K');
-                    //leds_on(); // doesnt work, seems to crash, but the code gets to print 'k' to uart
-                    if(key_buffer == 1)
-                    {
-                        cashInserted += 20;
-                    } else if(key_buffer == 2)
-                    {
-                      cashInserted += 5;
-                    }
-
-                    u16_to_str(cashInserted, line1);
-                    displayUpdate("Cash inserted:", line1);
-                    uart0_putc('k');
+                    cashInserted += 20;
                 }
-                if(xQueueReceive(key_queue,  &key_buffer, 20) == pdTRUE)
+                else if(key_buffer == 2)  // anti-clockwise
                 {
-                    if(key_buffer == '#') //we are done with payment
+                    if(cashInserted >= 5)
                     {
-                        
-                        switch (selectedProduct)
+                        cashInserted -= 5;
+                    }
+                }
+                formatter_format_cash_status(cashInserted, line1, line2);
+                displayUpdate(line1, line2);
+            }
+            
+            //get input from keypad for confirm/cancel
+            if(xQueueReceive(key_queue,  &key_buffer, 0) == pdTRUE)
+            {
+                if(key_buffer == '#') //we are done with payment
+                {
+                    switch (selectedProduct)
+                    {
+                    case ESPRESSO:
+                        if (cashInserted >= espresso_price_dkk)
                         {
-                        case ESPRESSO:
-                            if (cashInserted >= espresso_price_dkk)
-                            {
-                                //payment successful, update display and move to brewing state
-                                cashInserted -= espresso_price_dkk; //calculate change to be given
-                                give_change();
-                                brewerState = CUP_PRESENCE;
-                            } else {
-                                //not enough cash inserted, update display accordingly
-                                //maybe we let them continue to insert cash instead of going back to product selection?
-                            }
-                            break;
-                        case LATTE:
-                            if (cashInserted >= latte_price_dkk)
-                            {
-                                //payment successful, update display and move to brewing state
-                                cashInserted -= latte_price_dkk; //calculate change to be given
-                                give_change();
-                                brewerState =  CUP_PRESENCE;
-                            } else {
-                                //not enough cash inserted, update display accordingly
-                                //maybe we let them continue to insert cash instead of going back to product selection?
-                            }
-                            break;
-                        case FILTER_COFFEE: //depends on amount dispenced so handled later just continue for now.
+                            //payment successful, update display and move to brewing state
+                            cashInserted -= espresso_price_dkk; //calculate change to be given
+                            give_change();
                             brewerState = CUP_PRESENCE;
-                            paymentType = 1;
-                            break;
-                        default:
-                            break;
+                        } else {
+                            //not enough cash inserted, update display accordingly
+                            displayUpdate("Not enough!", "Insert more cash");
                         }
-                    } else if(key_buffer == '*') //cancel payment and return change
-                    {
-                        give_change();
-                        brewerState = PRODUCT_SELECT;
-                        //update display
-                        displayUpdate("Payment cancel.", "Giving change...");
+                        break;
+                    case LATTE:
+                        if (cashInserted >= latte_price_dkk)
+                        {
+                            //payment successful, update display and move to brewing state
+                            cashInserted -= latte_price_dkk; //calculate change to be given
+                            give_change();
+                            brewerState =  CUP_PRESENCE;
+                        } else {
+                            //not enough cash inserted, update display accordingly
+                            displayUpdate("Not enough!", "Insert more cash");
+                        }
+                        break;
+                    case FILTER_COFFEE: //depends on amount dispenced so handled later just continue for now.
+                        brewerState = CUP_PRESENCE;
+                        paymentType = 1;
+                        break;
+                    default:
+                        break;
                     }
+                    
+                } else if(key_buffer == '*') //cancel payment and return change
+                {
+                    uart0_putc('A');  // Mark: asterisk pressed
+                    give_change();
+                    brewerState = PRODUCT_SELECT;
+                    cashInserted = 0;
+                    //update display
+                    displayUpdate("Payment cancel.", "Giving change...");
                 }
+                }
+            
+            //reset flag when leaving CASH_ENTRY
+            if(brewerState != CASH_ENTRY)
+            {
+                cash_entry_shown = 0;
+            }
             break;
+        }
         case CUP_PRESENCE:
-            //update display
-            xQueueReset(button_queue1);
+        {
+            static BOOLEAN cup_display_shown = 0;
+            
+            //clear queue and display only once
+            if(cup_display_shown == 0)
+            {
+                xQueueReset(button_queue1);
+                displayUpdate("Place cup", "Press Button 1");
+                cup_display_shown = 1;
+            }
+            
             /* debug: waiting for cup presence */
             uart0_putc('E');
             //wait for signal from "cup sensor" (aka button input)
             if(xQueueReceive(button_queue1, &key_buffer, portMAX_DELAY) == pdTRUE){ //just check if its been clicked
                 brewerState = READY_TO_BREW;
+                cup_display_shown = 0;  //reset for next time
             }
             /* debug: leaving CUP_PRESENCE */
             uart0_putc('e');
             break;
+        }
         case READY_TO_BREW:
-            //update display (waiting for start input)
-            xQueueReset(button_queue2);
+        {
+            static BOOLEAN brew_display_shown = 0;
+            
+            //clear queue and display only once
+            if(brew_display_shown == 0)
+            {
+                xQueueReset(button_queue2);
+                displayUpdate("Ready to brew?", "Press Button 2");
+                brew_display_shown = 1;
+            }
+            
             /* debug: waiting for ready to brew trigger */
             uart0_putc('F');
             if(xQueueReceive(button_queue2,  &key_buffer, portMAX_DELAY) == pdTRUE)
             {
                 brewerState = selectedProduct; //move to brewing state based on selected product
+                brew_display_shown = 0;  //reset for next time
             }
             /* debug: leaving READY_TO_BREW */
             uart0_putc('f');
             break;
+        }
         case ESPRESSO_BREWING:
             //update display with brewing status
             displayUpdate("Espresso select", "Grinding beans...");
@@ -924,23 +961,11 @@ void coffebrewer_task(void *pvParameters)
                             startTimer(TIMER2, INACTIVITY_TIME);
                             coffeeDispensed += perTickAmount; 
                             remaining_cash -= perTickAmount * filter_price_per_cl_dkk;
-                            {
-                                size_t pos = 0U;
-
-                                line1[0] = '\0';
-                                append_str(line1, sizeof(line1), &pos, "Amt: ");
-                                append_u32(line1, sizeof(line1), &pos, (INT32U)(coffeeDispensed + 0.5f));
-                                append_str(line1, sizeof(line1), &pos, " cl U: ");
-                                append_u16(line1, sizeof(line1), &pos, filter_price_per_cl_dkk);
-                            }
-                            {
-                                INT32U total_tenths = (INT32U)((coffeeDispensed * (FP32)filter_price_per_cl_dkk * 10.0f) + 0.5f);
-                                size_t pos = 0U;
-
-                                line2[0] = '\0';
-                                append_str(line2, sizeof(line2), &pos, "Total: $");
-                                append_fixed_1(line2, sizeof(line2), &pos, total_tenths);
-                            }
+                            formatter_format_progress((INT16U)(coffeeDispensed + 0.5f),
+                                                 filter_price_per_cl_dkk,
+                                                 (INT32U)((coffeeDispensed * (FP32)filter_price_per_cl_dkk * 10.0f) + 0.5f),
+                                                 line1,
+                                                 line2);
                             displayUpdate(line1, line2);
                         }
                     }
@@ -961,23 +986,11 @@ void coffebrewer_task(void *pvParameters)
                             
                             coffeeDispensed += perTickAmount; 
                             remaining_cash -= perTickAmount * filter_price_per_cl_dkk;
-                            {
-                                size_t pos = 0U;
-
-                                line1[0] = '\0';
-                                append_str(line1, sizeof(line1), &pos, "Amt: ");
-                                append_u32(line1, sizeof(line1), &pos, (INT32U)(coffeeDispensed + 0.5f));
-                                append_str(line1, sizeof(line1), &pos, " cl U: ");
-                                append_u16(line1, sizeof(line1), &pos, filter_price_per_cl_dkk);
-                            }
-                            {
-                                INT32U total_tenths = (INT32U)((coffeeDispensed * (FP32)filter_price_per_cl_dkk * 10.0f) + 0.5f);
-                                size_t pos = 0U;
-
-                                line2[0] = '\0';
-                                append_str(line2, sizeof(line2), &pos, "Total: $");
-                                append_fixed_1(line2, sizeof(line2), &pos, total_tenths);
-                            }
+                            formatter_format_progress((INT16U)(coffeeDispensed + 0.5f),
+                                                 filter_price_per_cl_dkk,
+                                                 (INT32U)((coffeeDispensed * (FP32)filter_price_per_cl_dkk * 10.0f) + 0.5f),
+                                                 line1,
+                                                 line2);
                             displayUpdate(line1, line2);
                         }
                     }
@@ -999,23 +1012,11 @@ void coffebrewer_task(void *pvParameters)
                                 startTimer(TIMER2, INACTIVITY_TIME);
                                 coffeeDispensed += perTickAmount;
                                 cardSumToPay += perTickAmount * filter_price_per_cl_dkk; //update the sum to pay based on how much coffee they have dispensed
-                                {
-                                    size_t pos = 0U;
-
-                                    line1[0] = '\0';
-                                    append_str(line1, sizeof(line1), &pos, "Amt: ");
-                                    append_u32(line1, sizeof(line1), &pos, (INT32U)(coffeeDispensed + 0.5f));
-                                    append_str(line1, sizeof(line1), &pos, " cl U: ");
-                                    append_u16(line1, sizeof(line1), &pos, filter_price_per_cl_dkk);
-                                }
-                                {
-                                    INT32U total_tenths = (INT32U)((cardSumToPay * 10.0f) + 0.5f);
-                                    size_t pos = 0U;
-
-                                    line2[0] = '\0';
-                                    append_str(line2, sizeof(line2), &pos, "Total: $");
-                                    append_fixed_1(line2, sizeof(line2), &pos, total_tenths);
-                                }
+                                formatter_format_progress((INT16U)(coffeeDispensed + 0.5f),
+                                                     filter_price_per_cl_dkk,
+                                                     (INT32U)((cardSumToPay * 10.0f) + 0.5f),
+                                                     line1,
+                                                     line2);
                                 displayUpdate(line1, line2);
                             }
                         }
@@ -1035,23 +1036,11 @@ void coffebrewer_task(void *pvParameters)
                             
                             coffeeDispensed += perTickAmount; 
                             cardSumToPay += perTickAmount * filter_price_per_cl_dkk; //update the sum to pay based on how much coffee they have dispensed
-                            {
-                                size_t pos = 0U;
-
-                                line1[0] = '\0';
-                                append_str(line1, sizeof(line1), &pos, "Amt: ");
-                                append_u32(line1, sizeof(line1), &pos, (INT32U)(coffeeDispensed + 0.5f));
-                                append_str(line1, sizeof(line1), &pos, " cl U: ");
-                                append_u16(line1, sizeof(line1), &pos, filter_price_per_cl_dkk);
-                            }
-                            {
-                                INT32U total_tenths = (INT32U)((cardSumToPay * 10.0f) + 0.5f);
-                                size_t pos = 0U;
-
-                                line2[0] = '\0';
-                                append_str(line2, sizeof(line2), &pos, "Total: $");
-                                append_fixed_1(line2, sizeof(line2), &pos, total_tenths);
-                            }
+                            formatter_format_progress((INT16U)(coffeeDispensed + 0.5f),
+                                                 filter_price_per_cl_dkk,
+                                                 (INT32U)((cardSumToPay * 10.0f) + 0.5f),
+                                                 line1,
+                                                 line2);
                             displayUpdate(line1, line2);
                         }
                         }
@@ -1065,7 +1054,7 @@ void coffebrewer_task(void *pvParameters)
             break;
         case TAKE_CUP:
             //update display to take cup
-            displayUpdate("Please take cup", "press 1");
+            displayUpdate("Please take your cup", "(press button 1 when done)");
             xQueueReset(button_queue1);
             
             //Log the completed transaction
@@ -1098,7 +1087,7 @@ void coffebrewer_task(void *pvParameters)
                 }
                 else if(paymentType == PAY_CARD)
                 {
-                    u64_to_str_fixed_width(cardNumber, transaction.payment, 16U);
+                    formatter_format_card_number(cardNumber, transaction.payment, sizeof(transaction.payment));
                 }
 
                 xQueueOverwrite(transaction_queue, &transaction);
