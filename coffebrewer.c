@@ -10,7 +10,6 @@
 #include "uart0.h"
 #include "logger.h"
 #include <string.h>
-#include <stdio.h>
 
 extern QueueHandle_t button_queue1;
 extern QueueHandle_t button_queue2;
@@ -59,6 +58,116 @@ FP32 perTickAmount = 0.0f;
 
 char line1[17];
 char line2[17];
+
+static void append_char(char *dst, size_t dst_size, size_t *pos, char ch)
+{
+    if(dst == NULL || pos == NULL || dst_size == 0U)
+    {
+        return;
+    }
+
+    if(*pos + 1U < dst_size)
+    {
+        dst[*pos] = ch;
+        (*pos)++;
+        dst[*pos] = '\0';
+    }
+}
+
+static void append_str(char *dst, size_t dst_size, size_t *pos, const char *src)
+{
+    if(src == NULL)
+    {
+        return;
+    }
+
+    while(*src != '\0')
+    {
+        append_char(dst, dst_size, pos, *src);
+        src++;
+    }
+}
+
+static void append_u32(char *dst, size_t dst_size, size_t *pos, INT32U value)
+{
+    char temp[10];
+    size_t count = 0;
+
+    do
+    {
+        temp[count++] = (char)('0' + (value % 10U));
+        value /= 10U;
+    }
+    while((value > 0U) && (count < sizeof(temp)));
+
+    while(count > 0U)
+    {
+        append_char(dst, dst_size, pos, temp[--count]);
+    }
+}
+
+static void append_u16(char *dst, size_t dst_size, size_t *pos, INT16U value)
+{
+    append_u32(dst, dst_size, pos, (INT32U)value);
+}
+
+static void append_two_digits(char *dst, size_t dst_size, size_t *pos, INT32U value)
+{
+    append_char(dst, dst_size, pos, (char)('0' + ((value / 10U) % 10U)));
+    append_char(dst, dst_size, pos, (char)('0' + (value % 10U)));
+}
+
+static void append_money_from_cents(char *dst, size_t dst_size, size_t *pos, INT32U cents)
+{
+    append_char(dst, dst_size, pos, '$');
+    append_u32(dst, dst_size, pos, cents / 100U);
+    append_char(dst, dst_size, pos, '.');
+    append_two_digits(dst, dst_size, pos, cents % 100U);
+}
+
+static void append_fixed_1(char *dst, size_t dst_size, size_t *pos, INT32U tenths)
+{
+    append_u32(dst, dst_size, pos, tenths / 10U);
+    append_char(dst, dst_size, pos, '.');
+    append_char(dst, dst_size, pos, (char)('0' + (tenths % 10U)));
+}
+
+static void u64_to_str_fixed_width(INT64U value, char *str, INT8U width)
+{
+    char temp[20];
+    INT8U digits = 0U;
+
+    if(str == NULL || width == 0U)
+    {
+        if(str != NULL)
+        {
+            str[0] = '\0';
+        }
+        return;
+    }
+
+    do
+    {
+        temp[digits++] = (char)('0' + (INT8U)(value % 10U));
+        value /= 10U;
+    }
+    while((value > 0U) && (digits < sizeof(temp)));
+
+    while(digits < width && digits < sizeof(temp))
+    {
+        temp[digits++] = '0';
+    }
+
+    {
+        INT8U out = 0U;
+
+        while(digits > 0U)
+        {
+            str[out++] = temp[--digits];
+        }
+        str[out] = '\0';
+    }
+}
 
 void u16_to_str(INT16U value, char *str)
 {
@@ -148,7 +257,13 @@ void give_change(){
         xQueueSend(greenQueue, &(INT16U){LEDOFF}, portMAX_DELAY);
         cashInserted -= 1;
         //update display with remaining change
-        snprintf(line1, sizeof(line1), "Change: $%.2f", (float)cashInserted / 100.0f);
+        {
+            size_t pos = 0U;
+
+            line1[0] = '\0';
+            append_str(line1, sizeof(line1), &pos, "Change: ");
+            append_money_from_cents(line1, sizeof(line1), &pos, (INT32U)cashInserted);
+        }
         line2[0] = '\0';
         displayUpdate(line1, line2);
     }
@@ -296,15 +411,29 @@ void coffebrewer_task(void *pvParameters)
 
                 time_of_day_base_tick = xTaskGetTickCount();
 
-                snprintf(line1, sizeof(line1), "E:%u L:%u F:%u",
-                         (unsigned)espresso_price_dkk,
-                         (unsigned)latte_price_dkk,
-                         (unsigned)filter_price_per_cl_dkk);
+                {
+                    size_t pos = 0U;
+
+                    line1[0] = '\0';
+                    append_str(line1, sizeof(line1), &pos, "E:");
+                    append_u16(line1, sizeof(line1), &pos, espresso_price_dkk);
+                    append_str(line1, sizeof(line1), &pos, " L:");
+                    append_u16(line1, sizeof(line1), &pos, latte_price_dkk);
+                    append_str(line1, sizeof(line1), &pos, " F:");
+                    append_u16(line1, sizeof(line1), &pos, filter_price_per_cl_dkk);
+                }
                 INT32U tod = brewer_get_time_of_day_seconds();
-                snprintf(line2, sizeof(line2), "T:%02u:%02u:%02u",
-                         (unsigned)(tod / 3600U),
-                         (unsigned)((tod % 3600U) / 60U),
-                         (unsigned)(tod % 60U));
+                {
+                    size_t pos = 0U;
+
+                    line2[0] = '\0';
+                    append_str(line2, sizeof(line2), &pos, "T:");
+                    append_two_digits(line2, sizeof(line2), &pos, tod / 3600U);
+                    append_char(line2, sizeof(line2), &pos, ':');
+                    append_two_digits(line2, sizeof(line2), &pos, (tod % 3600U) / 60U);
+                    append_char(line2, sizeof(line2), &pos, ':');
+                    append_two_digits(line2, sizeof(line2), &pos, tod % 60U);
+                }
                 displayUpdate(line1, line2);
                 startup_config_done = 1;
                 brewerState = PRODUCT_SELECT;
@@ -570,15 +699,6 @@ void coffebrewer_task(void *pvParameters)
                 {
                     uart0_putc('K');
                     //leds_on(); // doesnt work, seems to crash, but the code gets to print 'k' to uart
-                    //update display with current sum
-                    //snprintf(line1, sizeof(line1), "%u", (unsigned)cashInserted); //something is wrong witht the snprintf
-                    //snprintf(line1, sizeof(line1), "%u", 15u); //just for testing
-                    wr_str_LCD(line1);
-                    u16_to_str(cashInserted, line1); // this works instead of snprintf for some reason. 
-                    uart0_putc('k');
-
-                    //here i only want to update the last line. 
-                    wr_str_LCD(line1); //only update the second line. 
                     if(key_buffer == 1)
                     {
                         cashInserted += 20;
@@ -586,6 +706,10 @@ void coffebrewer_task(void *pvParameters)
                     {
                       cashInserted += 5;
                     }
+
+                    u16_to_str(cashInserted, line1);
+                    displayUpdate("Cash inserted:", line1);
+                    uart0_putc('k');
                 }
                 if(xQueueReceive(key_queue,  &key_buffer, 20) == pdTRUE)
                 {
@@ -800,8 +924,23 @@ void coffebrewer_task(void *pvParameters)
                             startTimer(TIMER2, INACTIVITY_TIME);
                             coffeeDispensed += perTickAmount; 
                             remaining_cash -= perTickAmount * filter_price_per_cl_dkk;
-                            snprintf(line1, sizeof(line1), "Amt: %3.0f cl U: %1u", (double)coffeeDispensed, (unsigned)filter_price_per_cl_dkk);
-                            snprintf(line2, sizeof(line2), "Total: $%4.1f", coffeeDispensed * filter_price_per_cl_dkk);
+                            {
+                                size_t pos = 0U;
+
+                                line1[0] = '\0';
+                                append_str(line1, sizeof(line1), &pos, "Amt: ");
+                                append_u32(line1, sizeof(line1), &pos, (INT32U)(coffeeDispensed + 0.5f));
+                                append_str(line1, sizeof(line1), &pos, " cl U: ");
+                                append_u16(line1, sizeof(line1), &pos, filter_price_per_cl_dkk);
+                            }
+                            {
+                                INT32U total_tenths = (INT32U)((coffeeDispensed * (FP32)filter_price_per_cl_dkk * 10.0f) + 0.5f);
+                                size_t pos = 0U;
+
+                                line2[0] = '\0';
+                                append_str(line2, sizeof(line2), &pos, "Total: $");
+                                append_fixed_1(line2, sizeof(line2), &pos, total_tenths);
+                            }
                             displayUpdate(line1, line2);
                         }
                     }
@@ -822,8 +961,23 @@ void coffebrewer_task(void *pvParameters)
                             
                             coffeeDispensed += perTickAmount; 
                             remaining_cash -= perTickAmount * filter_price_per_cl_dkk;
-                            snprintf(line1, sizeof(line1), "Amt: %3.0f cl U: %1u", (double)coffeeDispensed, (unsigned)filter_price_per_cl_dkk);
-                            snprintf(line2, sizeof(line2), "Total: $%4.1f", coffeeDispensed * filter_price_per_cl_dkk);
+                            {
+                                size_t pos = 0U;
+
+                                line1[0] = '\0';
+                                append_str(line1, sizeof(line1), &pos, "Amt: ");
+                                append_u32(line1, sizeof(line1), &pos, (INT32U)(coffeeDispensed + 0.5f));
+                                append_str(line1, sizeof(line1), &pos, " cl U: ");
+                                append_u16(line1, sizeof(line1), &pos, filter_price_per_cl_dkk);
+                            }
+                            {
+                                INT32U total_tenths = (INT32U)((coffeeDispensed * (FP32)filter_price_per_cl_dkk * 10.0f) + 0.5f);
+                                size_t pos = 0U;
+
+                                line2[0] = '\0';
+                                append_str(line2, sizeof(line2), &pos, "Total: $");
+                                append_fixed_1(line2, sizeof(line2), &pos, total_tenths);
+                            }
                             displayUpdate(line1, line2);
                         }
                     }
@@ -845,8 +999,23 @@ void coffebrewer_task(void *pvParameters)
                                 startTimer(TIMER2, INACTIVITY_TIME);
                                 coffeeDispensed += perTickAmount;
                                 cardSumToPay += perTickAmount * filter_price_per_cl_dkk; //update the sum to pay based on how much coffee they have dispensed
-                                snprintf(line1, sizeof(line1), "Amt: %3.0f cl U: %1u", (double)coffeeDispensed, (unsigned)filter_price_per_cl_dkk);
-                                snprintf(line2, sizeof(line2), "Total: $%4.1f", cardSumToPay);
+                                {
+                                    size_t pos = 0U;
+
+                                    line1[0] = '\0';
+                                    append_str(line1, sizeof(line1), &pos, "Amt: ");
+                                    append_u32(line1, sizeof(line1), &pos, (INT32U)(coffeeDispensed + 0.5f));
+                                    append_str(line1, sizeof(line1), &pos, " cl U: ");
+                                    append_u16(line1, sizeof(line1), &pos, filter_price_per_cl_dkk);
+                                }
+                                {
+                                    INT32U total_tenths = (INT32U)((cardSumToPay * 10.0f) + 0.5f);
+                                    size_t pos = 0U;
+
+                                    line2[0] = '\0';
+                                    append_str(line2, sizeof(line2), &pos, "Total: $");
+                                    append_fixed_1(line2, sizeof(line2), &pos, total_tenths);
+                                }
                                 displayUpdate(line1, line2);
                             }
                         }
@@ -866,8 +1035,23 @@ void coffebrewer_task(void *pvParameters)
                             
                             coffeeDispensed += perTickAmount; 
                             cardSumToPay += perTickAmount * filter_price_per_cl_dkk; //update the sum to pay based on how much coffee they have dispensed
-                            snprintf(line1, sizeof(line1), "Amt: %3.0f cl U: %1u", (double)coffeeDispensed, (unsigned)filter_price_per_cl_dkk);
-                            snprintf(line2, sizeof(line2), "Total: $%4.1f", cardSumToPay);
+                            {
+                                size_t pos = 0U;
+
+                                line1[0] = '\0';
+                                append_str(line1, sizeof(line1), &pos, "Amt: ");
+                                append_u32(line1, sizeof(line1), &pos, (INT32U)(coffeeDispensed + 0.5f));
+                                append_str(line1, sizeof(line1), &pos, " cl U: ");
+                                append_u16(line1, sizeof(line1), &pos, filter_price_per_cl_dkk);
+                            }
+                            {
+                                INT32U total_tenths = (INT32U)((cardSumToPay * 10.0f) + 0.5f);
+                                size_t pos = 0U;
+
+                                line2[0] = '\0';
+                                append_str(line2, sizeof(line2), &pos, "Total: $");
+                                append_fixed_1(line2, sizeof(line2), &pos, total_tenths);
+                            }
                             displayUpdate(line1, line2);
                         }
                         }
@@ -914,7 +1098,7 @@ void coffebrewer_task(void *pvParameters)
                 }
                 else if(paymentType == PAY_CARD)
                 {
-                    snprintf(transaction.payment, sizeof(transaction.payment), "%016llu", cardNumber);
+                    u64_to_str_fixed_width(cardNumber, transaction.payment, 16U);
                 }
 
                 xQueueOverwrite(transaction_queue, &transaction);
