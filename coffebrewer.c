@@ -161,7 +161,7 @@ void timer_task(void *pvParameters) //needs semaphores... (everywhere)
                     timer1 = command.ticks;
                     break;
                 case TIMER2:
-                    //uart0_puts("Starting timer2");
+                    uart0_puts("Starting timer2");
                     timer2 = command.ticks;
                     break;
                 case TIMER3:
@@ -690,37 +690,38 @@ void coffebrewer_task(void *pvParameters)
             vTaskDelay(10 / portTICK_RATE_MS); // yield to let timer set
             while (timer1 > 0)
             {
-                startTimer(TIMER2, LED_BLINK); //blink yellow led while grinding
-                if(timer1 > GRIND_TIME - LED_BLINK) //only continue blinking if we have enough time left
+                if(timer1 > (2 * LED_BLINK)) //only continue blinking if we have enough time left
                 {
+                    uart0_puts("Starting timer to turn on.");
+                    startTimer(TIMER2, LED_BLINK); //blink yellow led while grinding
                     waitForTimer(TIMER2);
                     xQueueSend(yellowQueue, &(INT16U){LEDON}, portMAX_DELAY);
-                }
-                startTimer(TIMER2, LED_BLINK);
-                if(timer1 > GRIND_TIME - LED_BLINK) //only continue blinking if we have enough time left
-                {
+
+                    uart0_puts("Starting timer to turn off.");
+                    startTimer(TIMER2, LED_BLINK);
                     waitForTimer(TIMER2);
                 }
                 xQueueSend(yellowQueue, &(INT16U){LEDOFF}, portMAX_DELAY);
                 vTaskDelay(10 / portTICK_RATE_MS); //yield to let timer_task decrement timer1
             }
+
             startTimer(TIMER1, BREW_TIME); //14 seconds
             displayUpdate("Espresso select", "Brewing coffee..");
             vTaskDelay(10 / portTICK_RATE_MS); // yield to let timer set
             while (timer1 > 0)
             {
-                startTimer(TIMER2, LED_BLINK); //blink red led while brewing
-                if(timer1 > BREW_TIME - LED_BLINK) //only continue blinking if we have enough time left
+                if(timer1 > (2 * LED_BLINK)) //only continue blinking if we have enough time left
                 {
+                    uart0_puts("Starting timer to turn on.");
+                    startTimer(TIMER2, LED_BLINK); //blink yellow led while grinding
                     waitForTimer(TIMER2);
                     xQueueSend(redQueue, &(INT16U){LEDON}, portMAX_DELAY);
-                }
-                startTimer(TIMER2, LED_BLINK);
-                if(timer1 > BREW_TIME - LED_BLINK) //only continue blinking if we have enough time left
-                {
+
+                    uart0_puts("Starting timer to turn off.");
+                    startTimer(TIMER2, LED_BLINK);
                     waitForTimer(TIMER2);
                 }
-                xQueueSend(redQueue, &(INT16U){LEDOFF}, portMAX_DELAY); //always turn off red led after brew time even if we stopped blinking before
+                xQueueSend(redQueue, &(INT16U){LEDOFF}, portMAX_DELAY);
                 vTaskDelay(10 / portTICK_RATE_MS); //yield to let timer_task decrement timer1
             }
 
@@ -736,57 +737,61 @@ void coffebrewer_task(void *pvParameters)
             //same as espresso but with an extra step of frothing milk for 6.2 seconds with the green led on after grinding and brewing
             startTimer(TIMER1, GRIND_TIME); //7.5 seconds
             displayUpdate("Latte selected", "Grinding beans...");
+            vTaskDelay(10 / portTICK_RATE_MS); // yield to let timer set
             while (timer1 > 0)
             {
-                startTimer(TIMER2, LED_BLINK); //blink yellow led while grinding
-                if(timer1 > GRIND_TIME - LED_BLINK) //only continue blinking if we have enough time left
+                if(timer1 > (2 * LED_BLINK)) //only continue blinking if we have enough time left
                 {
+                    uart0_puts("Starting timer to turn on.");
+                    startTimer(TIMER2, LED_BLINK); //blink yellow led while grinding
                     waitForTimer(TIMER2);
                     xQueueSend(yellowQueue, &(INT16U){LEDON}, portMAX_DELAY);
-                }
-                startTimer(TIMER2, LED_BLINK);
-                if(timer1 > GRIND_TIME - LED_BLINK) //only continue blinking if we have enough time left
-                {
+
+                    uart0_puts("Starting timer to turn off.");
+                    startTimer(TIMER2, LED_BLINK);
                     waitForTimer(TIMER2);
                 }
                 xQueueSend(yellowQueue, &(INT16U){LEDOFF}, portMAX_DELAY);
                 vTaskDelay(10 / portTICK_RATE_MS); //yield to let timer_task decrement timer1
             }
-            displayUpdate("Latte selected", "Brewing coffee...");
 
             startTimer(TIMER1, BREW_TIME); //14 seconds
+            displayUpdate("Latte selected", "Brewing coffee...");
+            vTaskDelay(10 / portTICK_RATE_MS); // yield to let timer set
             while (timer1 > 0)
             {
-                startTimer(TIMER2, LED_BLINK); //blink red led while brewing
-                if(timer1 > BREW_TIME - LED_BLINK) //only continue blinking if we have enough time left
+                if(timer1 > (2 * LED_BLINK)) //only continue blinking if we have enough time left
                 {
+                    uart0_puts("Starting timer to turn on.");
+                    startTimer(TIMER2, LED_BLINK); //blink yellow led while grinding
                     waitForTimer(TIMER2);
                     xQueueSend(redQueue, &(INT16U){LEDON}, portMAX_DELAY);
-                }
-                startTimer(TIMER2, LED_BLINK);
-                if(timer1 > BREW_TIME - LED_BLINK) //only continue blinking if we have enough time left
-                {
+
+                    uart0_puts("Starting timer to turn off.");
+                    startTimer(TIMER2, LED_BLINK);
                     waitForTimer(TIMER2);
                 }
-                xQueueSend(redQueue, &(INT16U){LEDOFF}, portMAX_DELAY); //always turn off red led after brew time even if we stopped blinking before
+                xQueueSend(redQueue, &(INT16U){LEDOFF}, portMAX_DELAY);
                 vTaskDelay(10 / portTICK_RATE_MS); //yield to let timer_task decrement timer1
             }
+
             startTimer(TIMER1, LATTE_FROTH_TIME); //6.2 seconds
             displayUpdate("Latte selected", "Frothing milk...");
+            vTaskDelay(10 / portTICK_RATE_MS); // yield to let timer set
             while (timer1 > 0)
             {
-                startTimer(TIMER2, LED_BLINK); //blink green led while frothing
-                if(timer1 > LATTE_FROTH_TIME - LED_BLINK) //only continue blinking if we have enough time left
+                if(timer1 > (2 * LED_BLINK)) //only continue blinking if we have enough time left
                 {
+                    uart0_puts("Starting timer to turn on.");
+                    startTimer(TIMER2, LED_BLINK); //blink yellow led while grinding
                     waitForTimer(TIMER2);
                     xQueueSend(greenQueue, &(INT16U){LEDON}, portMAX_DELAY);
-                }
-                startTimer(TIMER2, LED_BLINK);
-                if(timer1 > LATTE_FROTH_TIME - LED_BLINK) //only continue blinking if we have enough time left
-                {
+
+                    uart0_puts("Starting timer to turn off.");
+                    startTimer(TIMER2, LED_BLINK);
                     waitForTimer(TIMER2);
                 }
-                xQueueSend(greenQueue, &(INT16U){LEDOFF}, portMAX_DELAY); //always turn off green led after froth time even if we stopped blinking before
+                xQueueSend(greenQueue, &(INT16U){LEDOFF}, portMAX_DELAY);
                 vTaskDelay(10 / portTICK_RATE_MS); //yield to let timer_task decrement timer1
             }
             //update display with brew complete
