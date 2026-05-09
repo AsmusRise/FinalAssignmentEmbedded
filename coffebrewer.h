@@ -62,6 +62,7 @@ extern QueueHandle_t timerCommandQueue;
 #define BREW_COMPLETE_TIME 100 //1 second
 #define SLOW_RATE_TIME 300 //3 seconds
 #define INACTIVITY_TIME 500 //5 seconds
+#define TIM_1_SEC 100 // 1 second
 
 
 #define LEDON 1

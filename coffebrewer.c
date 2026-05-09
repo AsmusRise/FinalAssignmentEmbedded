@@ -57,7 +57,6 @@ FP32 cardSumToPay = 0.0f;
 FP32 coffeeDispensed = 0.0f;
 FP32 coffeeRate = 0.6f;
 FP32 remaining_cash = 0.0f;
-FP32 perTickAmount = 0.0f;
 
 char line1[17];
 char line2[17];
@@ -115,20 +114,13 @@ static void startTimer(INT8U timerID, INT16U ticks)
 
 void give_change(){
     BOOLEAN ok;
-    uart0_puts("GIVE_CHANGE: START\n");
-    uart0_putc('G');
     while(cashInserted > 0) //one coin at a time by flashing green led
     {
-        uart0_puts("GIVE_CHANGE: next coin loop\n");
-        uart0_putc('g');
         startTimer(TIMER1, LED_BLINK);
-        uart0_puts("GIVE_CHANGE: timer started, waiting...\n");
         waitForTimer(TIMER1);
-        uart0_puts("GIVE_CHANGE: timer fired, sending LED ON\n");
         xQueueSend(greenQueue, &(INT16U){LEDON}, portMAX_DELAY);
         startTimer(TIMER1, LED_BLINK);
         waitForTimer(TIMER1);
-        uart0_puts("GIVE_CHANGE: timer fired, sending LED OFF\n");
         xQueueSend(greenQueue, &(INT16U){LEDOFF}, portMAX_DELAY);
         cashInserted -= 1;
         //update display with remaining change
@@ -140,8 +132,6 @@ void give_change(){
         }
         displayUpdate(line1, line2);
     }
-    uart0_puts("GIVE_CHANGE: DONE\n");
-    uart0_putc('H');
     xQueueSend(greenQueue, &(INT16U){LEDOFF}, portMAX_DELAY);
 }
 
@@ -157,15 +147,12 @@ void timer_task(void *pvParameters) //needs semaphores... (everywhere)
             switch(command.timer_id)
             {
                 case TIMER1:
-                    uart0_puts("Starting timer1");
                     timer1 = command.ticks;
                     break;
                 case TIMER2:
-                    uart0_puts("Starting timer2");
                     timer2 = command.ticks;
                     break;
                 case TIMER3:
-                    uart0_puts("Starting timer3");
                     timer3 = command.ticks;
                     break;
                 default:
@@ -648,13 +635,11 @@ void coffebrewer_task(void *pvParameters)
                 xQueueReset(button_queue1);
                 displayUpdate("Place cup", "Press Button 1");
                 cup_display_shown = 1;
-                uart0_puts("CUP_PRESENCE: waiting for button1\n");
             }
             
             //wait for signal from "cup sensor" (aka button input)
             if(xQueueReceive(button_queue1, &key_buffer, portMAX_DELAY) == pdTRUE)
             { 
-                uart0_puts("CUP_PRESENCE: button1 received\n");
                 brewerState = READY_TO_BREW;
                 cup_display_shown = 0;  //reset for next time
             }
@@ -671,12 +656,10 @@ void coffebrewer_task(void *pvParameters)
                 xQueueReset(button_queue2);
                 displayUpdate("Ready to brew?", "Press Button 2");
                 brew_display_shown = 1;
-                uart0_puts("READY_TO_BREW: waiting for button2\n");
             }
             
             if(xQueueReceive(button_queue2,  &key_buffer, portMAX_DELAY) == pdTRUE)
             {
-                uart0_puts("READY_TO_BREW: button2 received\n");
                 brewerState = selectedProduct; //move to brewing state based on selected product
                 brew_display_shown = 0;  //reset for next time
             }
@@ -692,12 +675,10 @@ void coffebrewer_task(void *pvParameters)
             {
                 if(timer1 > (2 * LED_BLINK)) //only continue blinking if we have enough time left
                 {
-                    uart0_puts("Starting timer to turn on.");
                     startTimer(TIMER2, LED_BLINK); //blink yellow led while grinding
                     waitForTimer(TIMER2);
                     xQueueSend(yellowQueue, &(INT16U){LEDON}, portMAX_DELAY);
 
-                    uart0_puts("Starting timer to turn off.");
                     startTimer(TIMER2, LED_BLINK);
                     waitForTimer(TIMER2);
                 }
@@ -712,12 +693,10 @@ void coffebrewer_task(void *pvParameters)
             {
                 if(timer1 > (2 * LED_BLINK)) //only continue blinking if we have enough time left
                 {
-                    uart0_puts("Starting timer to turn on.");
                     startTimer(TIMER2, LED_BLINK); //blink yellow led while grinding
                     waitForTimer(TIMER2);
                     xQueueSend(redQueue, &(INT16U){LEDON}, portMAX_DELAY);
 
-                    uart0_puts("Starting timer to turn off.");
                     startTimer(TIMER2, LED_BLINK);
                     waitForTimer(TIMER2);
                 }
@@ -742,12 +721,10 @@ void coffebrewer_task(void *pvParameters)
             {
                 if(timer1 > (2 * LED_BLINK)) //only continue blinking if we have enough time left
                 {
-                    uart0_puts("Starting timer to turn on.");
                     startTimer(TIMER2, LED_BLINK); //blink yellow led while grinding
                     waitForTimer(TIMER2);
                     xQueueSend(yellowQueue, &(INT16U){LEDON}, portMAX_DELAY);
 
-                    uart0_puts("Starting timer to turn off.");
                     startTimer(TIMER2, LED_BLINK);
                     waitForTimer(TIMER2);
                 }
@@ -762,12 +739,10 @@ void coffebrewer_task(void *pvParameters)
             {
                 if(timer1 > (2 * LED_BLINK)) //only continue blinking if we have enough time left
                 {
-                    uart0_puts("Starting timer to turn on.");
                     startTimer(TIMER2, LED_BLINK); //blink yellow led while grinding
                     waitForTimer(TIMER2);
                     xQueueSend(redQueue, &(INT16U){LEDON}, portMAX_DELAY);
 
-                    uart0_puts("Starting timer to turn off.");
                     startTimer(TIMER2, LED_BLINK);
                     waitForTimer(TIMER2);
                 }
@@ -782,12 +757,10 @@ void coffebrewer_task(void *pvParameters)
             {
                 if(timer1 > (2 * LED_BLINK)) //only continue blinking if we have enough time left
                 {
-                    uart0_puts("Starting timer to turn on.");
                     startTimer(TIMER2, LED_BLINK); //blink yellow led while grinding
                     waitForTimer(TIMER2);
                     xQueueSend(greenQueue, &(INT16U){LEDON}, portMAX_DELAY);
 
-                    uart0_puts("Starting timer to turn off.");
                     startTimer(TIMER2, LED_BLINK);
                     waitForTimer(TIMER2);
                 }
@@ -803,10 +776,13 @@ void coffebrewer_task(void *pvParameters)
             brewerState = TAKE_CUP; //move to next state
             break;
         case FILTER_COFFEE_BREWING:
-            //completely different...
+            uart0_puts("Entering FILTER_COFFEE");
             startTimer(TIMER1, SLOW_RATE_TIME);
+            vTaskDelay(10 / portTICK_RATE_MS); // yield to let timer set
             cardSumToPay = 0.0f;
-            remaining_cash = cashInserted; 
+            remaining_cash = cashInserted;
+            coffeeDispensed = 0.0f; 
+            INT8U dipensedThisSecond = 0;
             /*– Dispensed while start (button 2) is pressed or until prepaid amount is reached.
             – Rate: starts slow at 0.6 cl/s for 3 s, then 1.45 cl/s. More coffee can be added by repeated
             pushes of the start button (button 2), but after 5 seconds of inactivity, the coffee dispensing
@@ -815,114 +791,153 @@ void coffebrewer_task(void *pvParameters)
             //takes 20 ms pr input from button 2 when being held down so we should eat at a matching rate.
             if(paymentType == PAY_CASH)
             {
-                
-                
                 coffeeRate = 0.6f; //start rate at 0.6 cl/s
-                perTickAmount = coffeeRate * 0.01f; //calculate how much we should dispense every 10 ms to match the desired rate in cl/s
+                displayUpdate("FC Brewing", " Dispensing...");
                 while(timer1 > 0)
                 {
-                    displayUpdate("FC Brewing", " Dispensing...");
+                    if (timer2 == 0) 
+                    {
+                        dipensedThisSecond = 0;
+                        startTimer(TIMER2, TIM_1_SEC);
+                        vTaskDelay(10 / portTICK_RATE_MS); // yield to let timer set
+                    }
+
                     if(remaining_cash <= 0.0f) //if we have dispensed all the coffee the customer paid for we can just end the brewing process even if they havent released the button yet.
                     {
                         displayUpdate("Ran out of money", "Please take cup!");
                         brewerState = TAKE_CUP;
                         break;
                     }
-                    else if(xQueueReceive(button_queue2, &key_buffer, 20 ) == pdTRUE) //check if button is being held down
+                    else if(xQueueReceive(button_queue2, &key_buffer, 20 ) == pdTRUE && (dipensedThisSecond == 0)) //check if button is being held down
                     {
-
-                        if(key_buffer == 1)
-                        {
-                            startTimer(TIMER2, INACTIVITY_TIME);
-                            coffeeDispensed += perTickAmount; 
-                            remaining_cash -= perTickAmount * filter_price_per_cl_dkk;
-                            formatter_format_progress((INT16U)(coffeeDispensed + 0.5f),
-                                                 filter_price_per_cl_dkk,
-                                                 (INT32U)((coffeeDispensed * (FP32)filter_price_per_cl_dkk * 10.0f) + 0.5f),
-                                                 line1,
-                                                 line2);
-                            displayUpdate(line1, line2);
-                        }
+                        dipensedThisSecond++;
+                        startTimer(TIMER3, INACTIVITY_TIME);
+                        vTaskDelay(10 / portTICK_RATE_MS); // yield to let timer set
+                        coffeeDispensed += coffeeRate; 
+                        remaining_cash -= coffeeRate * filter_price_per_cl_dkk;
+                        formatter_format_progress((INT16U)(coffeeDispensed + 0.5f), // Plus a half to round up
+                                                filter_price_per_cl_dkk,
+                                                (INT32U)((coffeeDispensed * (FP32)filter_price_per_cl_dkk * 10.0f) + 0.5f), // Plus a half to round up
+                                                line1,
+                                                line2);
+                        displayUpdate(line1, line2);
                     }
-                    startTimer(TIMER3, 1);
-                    waitForTimer(TIMER3);
+
+                    if (timer3 == 0) 
+                    {
+                        displayUpdate("Idle too long.", "Take Cup.");
+                        brewerState = TAKE_CUP;
+                    }
                 }
 
                 coffeeRate = 1.45f; //after 3 seconds we increase the rate to 1.45 cl/s
-                perTickAmount = coffeeRate * 0.01f; //calculate how much we should dispense every 10 ms to match the desired rate in cl/s
 
-                while (remaining_cash > 0.0f && timer2 > 0) //keep dispensing as long as we have coffee to dispense and we havent had 5 seconds of inactivity
+                while (timer3 > 0) //keep dispensing as long as we havent had 5 seconds of inactivity
                 {
-                    if(xQueueReceive(button_queue2, &key_buffer, 20 ) == pdTRUE)
+                    if (timer2 == 0) 
                     {
-                        if(key_buffer == 1)
-                        {
-                            startTimer(TIMER2, INACTIVITY_TIME);
-                            
-                            coffeeDispensed += perTickAmount; 
-                            remaining_cash -= perTickAmount * filter_price_per_cl_dkk;
-                            formatter_format_progress((INT16U)(coffeeDispensed + 0.5f),
-                                                 filter_price_per_cl_dkk,
-                                                 (INT32U)((coffeeDispensed * (FP32)filter_price_per_cl_dkk * 10.0f) + 0.5f),
-                                                 line1,
-                                                 line2);
-                            displayUpdate(line1, line2);
-                        }
+                        dipensedThisSecond = 0;
+                        startTimer(TIMER2, TIM_1_SEC);
+                        vTaskDelay(10 / portTICK_RATE_MS); // yield to let timer set
                     }
-                    startTimer(TIMER3, 1);
-                    waitForTimer(TIMER3);
+                    if(remaining_cash <= 0.0f) //if we have dispensed all the coffee the customer paid for we can just end the brewing process even if they havent released the button yet.
+                    {
+                        displayUpdate("Ran out of money", "Please take cup!");
+                        brewerState = TAKE_CUP;
+                        break;
+                    }
+                    else if(xQueueReceive(button_queue2, &key_buffer, 20 ) == pdTRUE && (dipensedThisSecond == 0))
+                    {
+                        dipensedThisSecond++;
+                        startTimer(TIMER3, INACTIVITY_TIME);
+                        
+                        coffeeDispensed += coffeeRate; 
+                        remaining_cash -= coffeeRate * filter_price_per_cl_dkk;
+                        formatter_format_progress((INT16U)(coffeeDispensed + 0.5f), // Plus a half to round up 
+                                                filter_price_per_cl_dkk,
+                                                (INT32U)((coffeeDispensed * (FP32)filter_price_per_cl_dkk * 10.0f) + 0.5f), // Plus a half to round up
+                                                line1,
+                                                line2);
+                        displayUpdate(line1, line2);
+                    }
                 }
+                if (timer3 == 0) 
+                    {
+                        displayUpdate("Idle too long.", "Take Cup.");
+                        brewerState = TAKE_CUP;
+                    }
             }
             else if(paymentType == PAY_CARD)
             {
                 coffeeRate = 0.6f; //start rate at 0.6 cl/s
-                perTickAmount = coffeeRate * 0.01f; //calculate how much we should dispense every 10 ms to match the desired rate in cl/s
+                displayUpdate("FC Brewing", " Dispensing...");
                 while(timer1 > 0)
                     {
-                    //for card payment we just let them dispense until they release the button since we cant really track the amount they need to pay in the same way as with cash and we dont want to just set a fixed amount that they can dispense since it might not be enough or it might be too much.
-                    if(xQueueReceive(button_queue2, &key_buffer, 20 ) == pdTRUE) //check if button is being held down
+                        //for card payment we just let them dispense until they release the button 
+                        // since we cant really track the amount they need to pay in the same way as 
+                        // with cash and we dont want to just set a fixed amount that they can dispense 
+                        // since it might not be enough or it might be too much.
+
+                        if (timer2 == 0) 
                         {
-                            if(key_buffer == 1)
+                            dipensedThisSecond = 0;
+                            startTimer(TIMER2, TIM_1_SEC);
+                            vTaskDelay(10 / portTICK_RATE_MS); // yield to let timer set
+                        }
+
+                        if(xQueueReceive(button_queue2, &key_buffer, 20 ) == pdTRUE && (dipensedThisSecond == 0)) //check if button is being held down
                             {
-                                startTimer(TIMER2, INACTIVITY_TIME);
-                                coffeeDispensed += perTickAmount;
-                                cardSumToPay += perTickAmount * filter_price_per_cl_dkk; //update the sum to pay based on how much coffee they have dispensed
+                                dipensedThisSecond++;
+                                startTimer(TIMER3, INACTIVITY_TIME);
+                                coffeeDispensed += coffeeRate;
+                                cardSumToPay += coffeeRate * filter_price_per_cl_dkk; //update the sum to pay based on how much coffee they have dispensed
                                 formatter_format_progress((INT16U)(coffeeDispensed + 0.5f),
-                                                     filter_price_per_cl_dkk,
-                                                     (INT32U)((cardSumToPay * 10.0f) + 0.5f),
-                                                     line1,
-                                                     line2);
+                                                        filter_price_per_cl_dkk,
+                                                        (INT32U)((cardSumToPay * 10.0f) + 0.5f),
+                                                        line1,
+                                                        line2);
                                 displayUpdate(line1, line2);
                             }
+
+                        if (timer3 == 0) 
+                        {
+                            displayUpdate("Idle too long.", "Take Cup.");
+                            brewerState = TAKE_CUP;
                         }
-                    startTimer(TIMER3, 1);
-                    waitForTimer(TIMER3); //just to make sure we have a small delay before we start checking for inactivity so that we dont end the brewing process immediately if they just click the button once instead of holding it down
                     }
 
                 coffeeRate = 1.45f; //after 3 seconds we increase the rate to 1.45 cl/s
-                perTickAmount = coffeeRate * 0.01f; //calculate how much we should dispense every 10 ms to match the desired rate in cl/s
-                while(timer2 > 0)
+                while(timer3 > 0)
+                {
+                    if (timer2 == 0) 
                     {
-                    if(xQueueReceive(button_queue2, &key_buffer, 20 ) == pdTRUE)
+                        dipensedThisSecond = 0;
+                        startTimer(TIMER2, TIM_1_SEC);
+                        vTaskDelay(10 / portTICK_RATE_MS); // yield to let timer set
+                    }
+
+                    if(xQueueReceive(button_queue2, &key_buffer, 20 ) == pdTRUE && (dipensedThisSecond == 0)) //check if button is being held down
                         {
-                        if(key_buffer == 1)
-                        {
-                            startTimer(TIMER2, INACTIVITY_TIME);
-                            
-                            coffeeDispensed += perTickAmount; 
-                            cardSumToPay += perTickAmount * filter_price_per_cl_dkk; //update the sum to pay based on how much coffee they have dispensed
+                            dipensedThisSecond++;
+                            startTimer(TIMER3, INACTIVITY_TIME);
+                            coffeeDispensed += coffeeRate;
+                            cardSumToPay += coffeeRate * filter_price_per_cl_dkk; //update the sum to pay based on how much coffee they have dispensed
                             formatter_format_progress((INT16U)(coffeeDispensed + 0.5f),
-                                                 filter_price_per_cl_dkk,
-                                                 (INT32U)((cardSumToPay * 10.0f) + 0.5f),
-                                                 line1,
-                                                 line2);
+                                                    filter_price_per_cl_dkk,
+                                                    (INT32U)((cardSumToPay * 10.0f) + 0.5f),
+                                                    line1,
+                                                    line2);
                             displayUpdate(line1, line2);
                         }
+                    
+                }
+
+                if (timer3 == 0) 
+                        {
+                            displayUpdate("Idle too long.", "Take Cup.");
+                            brewerState = TAKE_CUP;
                         }
-                    startTimer(TIMER3, 1);
-                    waitForTimer(TIMER3);
-                        
-                    } 
+
             }
             brewerState = TAKE_CUP; 
             

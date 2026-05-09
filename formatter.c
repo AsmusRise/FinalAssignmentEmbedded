@@ -185,10 +185,9 @@ static void formatter_write_progress(const formatter_request_t *request,
 	char *cursor;
 	char *end;
 	INT32U total_whole;
-	INT32U total_fraction;
 
-	total_whole = request->total_price_tenths_dkk / 10U;
-	total_fraction = request->total_price_tenths_dkk % 10U;
+	/* total_price_tenths_dkk stores tenths of DKK; round to nearest DKK */
+	total_whole = (request->total_price_tenths_dkk + 5U) / 10U;
 	cursor = result->line1;
 	end = result->line1 + FORMATTER_TEXT_LENGTH - 1U;
 	cursor = formatter_append_str(cursor, end, "Amt: ");
@@ -199,10 +198,9 @@ static void formatter_write_progress(const formatter_request_t *request,
 
 	cursor = result->line2;
 	end = result->line2 + FORMATTER_TEXT_LENGTH - 1U;
-	cursor = formatter_append_str(cursor, end, "Total: $");
+	cursor = formatter_append_str(cursor, end, "Total: ");
 	cursor = formatter_append_uint(cursor, end, (unsigned long)total_whole, 1U);
-	cursor = formatter_append_char(cursor, end, '.');
-	cursor = formatter_append_uint(cursor, end, (unsigned long)total_fraction, 1U);
+	cursor = formatter_append_str(cursor, end, " DKK");
 	formatter_finalize(cursor, end);
 }
 
