@@ -48,12 +48,12 @@ extern QueueHandle_t redQueue;
 //function to turn all the leds off
 void leds_off(void)
 {
-  GPIO_PORTF_DATA_R &= ~0x0E; // turn off all leds (PF1, PF2 and PF3)
+  GPIO_PORTF_DATA_R |= 0x0E; // turn on all EMP leds (PF1, PF2 and PF3)
 }
 
 void leds_on(void)
 {
-  GPIO_PORTF_DATA_R |= 0x0E; // turn on all leds (PF1, PF2 and PF3)
+  GPIO_PORTF_DATA_R &= ~0x0E; // turn off all EMP leds (PF1, PF2 and PF3)
 }
 
 void led_init(void)
@@ -77,6 +77,8 @@ void led_init(void)
   // Enable the GPIO pins for digital function (PF1, PF2, PF3).
   GPIO_PORTF_DEN_R = 0x0E;
 
+  leds_off();
+
 }
 
 
@@ -88,39 +90,40 @@ void led_task(void *pvParameters)
   INT16U redON_RX = 0;
   while(1)  
   {
+  // The EMP leds work with a pull down resistor, so logic is inverted.
   //GPIO_PORTF_DATA_R ^= 0x08; // green led
   //GPIO_PORTF_DATA_R ^= 0x04; // yellow led
   //GPIO_PORTF_DATA_R ^= 0x02; // red led
-    if(xQueuePeek(greenQueue, &greenON_RX, 0)) // 0 instead of ( TickType_t ) 10 ) as i dont want to do anything if nothing is in the queue.
+    if(xQueueReceive(greenQueue, &greenON_RX, 0)) // Changed from xQueuePeek to xQueueReceive
     {
       if(greenON_RX == 0){
-        GPIO_PORTF_DATA_R &= ~0x08;
-      }
-      else
-      {
         GPIO_PORTF_DATA_R |= 0x08;
       }
+      else
+      {
+        GPIO_PORTF_DATA_R &= ~0x08;
+      }
     }
 
-    if(xQueuePeek(yellowQueue, &yellowON_RX, 0)) // 0 instead of ( TickType_t ) 10 ) as i dont want to do anything if nothing is in the queue.
+    if(xQueueReceive(yellowQueue, &yellowON_RX, 0)) // Changed from xQueuePeek to xQueueReceive
     {
       if(yellowON_RX == 0){
-        GPIO_PORTF_DATA_R &= ~0x04;
+        GPIO_PORTF_DATA_R |= 0x04;
       }
       else
       {
-        GPIO_PORTF_DATA_R |= 0x04;
+        GPIO_PORTF_DATA_R &= ~0x04;
       }
     }
 
-    if(xQueuePeek(redQueue, &redON_RX, 0)) // 0 instead of ( TickType_t ) 10 ) as i dont want to do anything if nothing is in the queue.
+    if(xQueueReceive(redQueue, &redON_RX, 0)) // Changed from xQueuePeek to xQueueReceive
     {
       if(redON_RX == 0){
-        GPIO_PORTF_DATA_R &= ~0x02;
+        GPIO_PORTF_DATA_R |= 0x02;
       }
       else
       {
-        GPIO_PORTF_DATA_R |= 0x02;
+        GPIO_PORTF_DATA_R &= ~0x02;
       }
     }
 

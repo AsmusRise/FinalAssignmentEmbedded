@@ -33,6 +33,8 @@
 
 /*****************************   Functions   *******************************/
 
+void buttons_init(void);
+
 INT8U button_pushed_1(void);
 INT8U button_pushed_2(void);
 

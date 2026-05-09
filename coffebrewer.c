@@ -62,142 +62,6 @@ FP32 perTickAmount = 0.0f;
 char line1[17];
 char line2[17];
 
-static void append_char(char *dst, size_t dst_size, size_t *pos, char ch)
-{
-    if(dst == NULL || pos == NULL || dst_size == 0U)
-    {
-        return;
-    }
-
-    if(*pos + 1U < dst_size)
-    {
-        dst[*pos] = ch;
-        (*pos)++;
-        dst[*pos] = '\0';
-    }
-}
-
-static void append_str(char *dst, size_t dst_size, size_t *pos, const char *src)
-{
-    if(src == NULL)
-    {
-        return;
-    }
-
-    while(*src != '\0')
-    {
-        append_char(dst, dst_size, pos, *src);
-        src++;
-    }
-}
-
-static void append_u32(char *dst, size_t dst_size, size_t *pos, INT32U value)
-{
-    char temp[10];
-    size_t count = 0;
-
-    do
-    {
-        temp[count++] = (char)('0' + (value % 10U));
-        value /= 10U;
-    }
-    while((value > 0U) && (count < sizeof(temp)));
-
-    while(count > 0U)
-    {
-        append_char(dst, dst_size, pos, temp[--count]);
-    }
-}
-
-static void append_u16(char *dst, size_t dst_size, size_t *pos, INT16U value)
-{
-    append_u32(dst, dst_size, pos, (INT32U)value);
-}
-
-static void append_two_digits(char *dst, size_t dst_size, size_t *pos, INT32U value)
-{
-    append_char(dst, dst_size, pos, (char)('0' + ((value / 10U) % 10U)));
-    append_char(dst, dst_size, pos, (char)('0' + (value % 10U)));
-}
-
-static void append_money_from_cents(char *dst, size_t dst_size, size_t *pos, INT32U cents)
-{
-    append_char(dst, dst_size, pos, '$');
-    append_u32(dst, dst_size, pos, cents / 100U);
-    append_char(dst, dst_size, pos, '.');
-    append_two_digits(dst, dst_size, pos, cents % 100U);
-}
-
-static void append_fixed_1(char *dst, size_t dst_size, size_t *pos, INT32U tenths)
-{
-    append_u32(dst, dst_size, pos, tenths / 10U);
-    append_char(dst, dst_size, pos, '.');
-    append_char(dst, dst_size, pos, (char)('0' + (tenths % 10U)));
-}
-
-static void u64_to_str_fixed_width(INT64U value, char *str, INT8U width)
-{
-    char temp[20];
-    INT8U digits = 0U;
-
-    if(str == NULL || width == 0U)
-    {
-        if(str != NULL)
-        {
-            str[0] = '\0';
-        }
-        return;
-    }
-
-    do
-    {
-        temp[digits++] = (char)('0' + (INT8U)(value % 10U));
-        value /= 10U;
-    }
-    while((value > 0U) && (digits < sizeof(temp)));
-
-    while(digits < width && digits < sizeof(temp))
-    {
-        temp[digits++] = '0';
-    }
-
-    {
-        INT8U out = 0U;
-
-        while(digits > 0U)
-        {
-            str[out++] = temp[--digits];
-        }
-        str[out] = '\0';
-    }
-}
-
-void u16_to_str(INT16U value, char *str)
-{
-    char temp[6];
-    INT8U i = 0;
-    INT8U j = 0;
-
-    if(value == 0)
-    {
-        str[0] = '0';
-        str[1] = '\0';
-        return;
-    }
-
-    while(value > 0 && i < sizeof(temp))
-    {
-        temp[i++] = (char)('0' + (value % 10U));
-        value /= 10U;
-    }
-
-    while(i > 0)
-    {
-        str[j++] = temp[--i];
-    }
-    str[j] = '\0';
-}
-
 INT32U brewer_get_time_of_day_seconds(void)
 {
     TickType_t now_tick = xTaskGetTickCount();
@@ -278,6 +142,7 @@ void give_change(){
     }
     uart0_puts("GIVE_CHANGE: DONE\n");
     uart0_putc('H');
+    xQueueSend(greenQueue, &(INT16U){LEDOFF}, portMAX_DELAY);
 }
 
 void timer_task(void *pvParameters) //needs semaphores... (everywhere)
@@ -292,12 +157,15 @@ void timer_task(void *pvParameters) //needs semaphores... (everywhere)
             switch(command.timer_id)
             {
                 case TIMER1:
+                    uart0_puts("Starting timer1");
                     timer1 = command.ticks;
                     break;
                 case TIMER2:
+                    //uart0_puts("Starting timer2");
                     timer2 = command.ticks;
                     break;
                 case TIMER3:
+                    uart0_puts("Starting timer3");
                     timer3 = command.ticks;
                     break;
                 default:
@@ -700,17 +568,13 @@ void coffebrewer_task(void *pvParameters)
             //get input from encoder for payment amount
             if(xQueueReceive(encoder_queue, &key_buffer, 20) == pdTRUE)
             {
-                leds_on();
                 if(key_buffer == 1)  // clockwise
                 {
                     cashInserted += 20;
                 }
                 else if(key_buffer == 2)  // anti-clockwise
                 {
-                    if(cashInserted >= 5)
-                    {
-                        cashInserted -= 5;
-                    }
+                    cashInserted += 5;
                 }
                 formatter_format_cash_status(cashInserted, line1, line2);
                 displayUpdate(line1, line2);
@@ -780,20 +644,20 @@ void coffebrewer_task(void *pvParameters)
             //clear queue and display only once
             if(cup_display_shown == 0)
             {
+                uart0_putc('E');  /* debug: entering CUP_PRESENCE */
                 xQueueReset(button_queue1);
                 displayUpdate("Place cup", "Press Button 1");
                 cup_display_shown = 1;
+                uart0_puts("CUP_PRESENCE: waiting for button1\n");
             }
             
-            /* debug: waiting for cup presence */
-            uart0_putc('E');
             //wait for signal from "cup sensor" (aka button input)
-            if(xQueueReceive(button_queue1, &key_buffer, portMAX_DELAY) == pdTRUE){ //just check if its been clicked
+            if(xQueueReceive(button_queue1, &key_buffer, portMAX_DELAY) == pdTRUE)
+            { 
+                uart0_puts("CUP_PRESENCE: button1 received\n");
                 brewerState = READY_TO_BREW;
                 cup_display_shown = 0;  //reset for next time
             }
-            /* debug: leaving CUP_PRESENCE */
-            uart0_putc('e');
             break;
         }
         case READY_TO_BREW:
@@ -803,59 +667,61 @@ void coffebrewer_task(void *pvParameters)
             //clear queue and display only once
             if(brew_display_shown == 0)
             {
+                uart0_putc('F');  /* debug: entering READY_TO_BREW */
                 xQueueReset(button_queue2);
                 displayUpdate("Ready to brew?", "Press Button 2");
                 brew_display_shown = 1;
+                uart0_puts("READY_TO_BREW: waiting for button2\n");
             }
             
-            /* debug: waiting for ready to brew trigger */
-            uart0_putc('F');
             if(xQueueReceive(button_queue2,  &key_buffer, portMAX_DELAY) == pdTRUE)
             {
+                uart0_puts("READY_TO_BREW: button2 received\n");
                 brewerState = selectedProduct; //move to brewing state based on selected product
                 brew_display_shown = 0;  //reset for next time
             }
-            /* debug: leaving READY_TO_BREW */
-            uart0_putc('f');
             break;
         }
         case ESPRESSO_BREWING:
-            //update display with brewing status
-            displayUpdate("Espresso select", "Grinding beans...");
-
             //Grind coffee for 7.5 s, indicated by the yellow LED, then brew coffee for 14 s, indicated by red LED
             startTimer(TIMER1, GRIND_TIME); //7.5 seconds
-            while (timer1 >0 )
+            //update display with brewing status
+            displayUpdate("Espresso select", "Grinding beans...");
+            vTaskDelay(10 / portTICK_RATE_MS); // yield to let timer set
+            while (timer1 > 0)
             {
                 startTimer(TIMER2, LED_BLINK); //blink yellow led while grinding
                 if(timer1 > GRIND_TIME - LED_BLINK) //only continue blinking if we have enough time left
                 {
                     waitForTimer(TIMER2);
                     xQueueSend(yellowQueue, &(INT16U){LEDON}, portMAX_DELAY);
-                 }
+                }
                 startTimer(TIMER2, LED_BLINK);
-                 if(timer1 > GRIND_TIME - LED_BLINK) //only continue blinking if we have enough time left
-                {                    
+                if(timer1 > GRIND_TIME - LED_BLINK) //only continue blinking if we have enough time left
+                {
                     waitForTimer(TIMER2);
-                 }
+                }
                 xQueueSend(yellowQueue, &(INT16U){LEDOFF}, portMAX_DELAY);
+                vTaskDelay(10 / portTICK_RATE_MS); //yield to let timer_task decrement timer1
             }
             startTimer(TIMER1, BREW_TIME); //14 seconds
             displayUpdate("Espresso select", "Brewing coffee..");
-            while (timer1 >0 )
+            vTaskDelay(10 / portTICK_RATE_MS); // yield to let timer set
+            while (timer1 > 0)
             {
                 startTimer(TIMER2, LED_BLINK); //blink red led while brewing
                 if(timer1 > BREW_TIME - LED_BLINK) //only continue blinking if we have enough time left
                 {
                     waitForTimer(TIMER2);
-                     xQueueSend(redQueue, &(INT16U){LEDON}, portMAX_DELAY);
-                 }
+                    xQueueSend(redQueue, &(INT16U){LEDON}, portMAX_DELAY);
+                }
                 startTimer(TIMER2, LED_BLINK);
-                 if(timer1 > BREW_TIME - LED_BLINK) //only continue blinking if we have enough time left
+                if(timer1 > BREW_TIME - LED_BLINK) //only continue blinking if we have enough time left
                 {
                     waitForTimer(TIMER2);
-                 }
+                }
                 xQueueSend(redQueue, &(INT16U){LEDOFF}, portMAX_DELAY); //always turn off red led after brew time even if we stopped blinking before
+                vTaskDelay(10 / portTICK_RATE_MS); //yield to let timer_task decrement timer1
             }
 
             //update display with brew complete
@@ -870,54 +736,58 @@ void coffebrewer_task(void *pvParameters)
             //same as espresso but with an extra step of frothing milk for 6.2 seconds with the green led on after grinding and brewing
             startTimer(TIMER1, GRIND_TIME); //7.5 seconds
             displayUpdate("Latte selected", "Grinding beans...");
-            while (timer1 >0 )
+            while (timer1 > 0)
             {
                 startTimer(TIMER2, LED_BLINK); //blink yellow led while grinding
                 if(timer1 > GRIND_TIME - LED_BLINK) //only continue blinking if we have enough time left
                 {
                     waitForTimer(TIMER2);
-                     xQueueSend(yellowQueue, &(INT16U){LEDON}, portMAX_DELAY);
-                 }
+                    xQueueSend(yellowQueue, &(INT16U){LEDON}, portMAX_DELAY);
+                }
                 startTimer(TIMER2, LED_BLINK);
-                 if(timer1 > GRIND_TIME - LED_BLINK) //only continue blinking if we have enough time left
-                {                    waitForTimer(TIMER2);
-                 }
+                if(timer1 > GRIND_TIME - LED_BLINK) //only continue blinking if we have enough time left
+                {
+                    waitForTimer(TIMER2);
+                }
                 xQueueSend(yellowQueue, &(INT16U){LEDOFF}, portMAX_DELAY);
+                vTaskDelay(10 / portTICK_RATE_MS); //yield to let timer_task decrement timer1
             }
             displayUpdate("Latte selected", "Brewing coffee...");
 
             startTimer(TIMER1, BREW_TIME); //14 seconds
-            while (timer1 >0 )
+            while (timer1 > 0)
             {
                 startTimer(TIMER2, LED_BLINK); //blink red led while brewing
                 if(timer1 > BREW_TIME - LED_BLINK) //only continue blinking if we have enough time left
                 {
                     waitForTimer(TIMER2);
-                     xQueueSend(redQueue, &(INT16U){LEDON}, portMAX_DELAY);
-                 }
+                    xQueueSend(redQueue, &(INT16U){LEDON}, portMAX_DELAY);
+                }
                 startTimer(TIMER2, LED_BLINK);
-                 if(timer1 > BREW_TIME - LED_BLINK) //only continue blinking if we have enough time left
+                if(timer1 > BREW_TIME - LED_BLINK) //only continue blinking if we have enough time left
                 {
                     waitForTimer(TIMER2);
-                 }
+                }
                 xQueueSend(redQueue, &(INT16U){LEDOFF}, portMAX_DELAY); //always turn off red led after brew time even if we stopped blinking before
+                vTaskDelay(10 / portTICK_RATE_MS); //yield to let timer_task decrement timer1
             }
             startTimer(TIMER1, LATTE_FROTH_TIME); //6.2 seconds
             displayUpdate("Latte selected", "Frothing milk...");
-            while (timer1 >0 )
+            while (timer1 > 0)
             {
                 startTimer(TIMER2, LED_BLINK); //blink green led while frothing
                 if(timer1 > LATTE_FROTH_TIME - LED_BLINK) //only continue blinking if we have enough time left
                 {
                     waitForTimer(TIMER2);
-                     xQueueSend(greenQueue, &(INT16U){LEDON}, portMAX_DELAY);
-                 }
+                    xQueueSend(greenQueue, &(INT16U){LEDON}, portMAX_DELAY);
+                }
                 startTimer(TIMER2, LED_BLINK);
-                 if(timer1 > LATTE_FROTH_TIME - LED_BLINK) //only continue blinking if we have enough time left
+                if(timer1 > LATTE_FROTH_TIME - LED_BLINK) //only continue blinking if we have enough time left
                 {
                     waitForTimer(TIMER2);
-                 }
+                }
                 xQueueSend(greenQueue, &(INT16U){LEDOFF}, portMAX_DELAY); //always turn off green led after froth time even if we stopped blinking before
+                vTaskDelay(10 / portTICK_RATE_MS); //yield to let timer_task decrement timer1
             }
             //update display with brew complete
             displayUpdate("Latte ready!", "Please take cup");
@@ -1053,8 +923,6 @@ void coffebrewer_task(void *pvParameters)
             
             break;
         case TAKE_CUP:
-            //update display to take cup
-            displayUpdate("Please take your cup", "(press button 1 when done)");
             xQueueReset(button_queue1);
             
             //Log the completed transaction

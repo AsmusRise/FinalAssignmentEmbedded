@@ -59,7 +59,7 @@ extern QueueHandle_t timerCommandQueue;
 #define GRIND_TIME 750 //7.5 seconds
 #define BREW_TIME 1400 //14 seconds
 #define LATTE_FROTH_TIME 620 //6.2 seconds
-#define BREW_COMPLETE_TIME 1000 //1 second
+#define BREW_COMPLETE_TIME 100 //1 second
 #define SLOW_RATE_TIME 300 //3 seconds
 #define INACTIVITY_TIME 500 //5 seconds
 

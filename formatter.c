@@ -154,17 +154,12 @@ static void formatter_write_change(const formatter_request_t *request,
 {
 	char *cursor;
 	char *end;
-	INT32U dollars;
-	INT32U cents;
 
-	dollars = request->cash_cents / 100U;
-	cents = request->cash_cents % 100U;
 	cursor = result->line1;
 	end = result->line1 + FORMATTER_TEXT_LENGTH - 1U;
-	cursor = formatter_append_str(cursor, end, "Change: $");
-	cursor = formatter_append_uint(cursor, end, (unsigned long)dollars, 1U);
-	cursor = formatter_append_char(cursor, end, '.');
-	cursor = formatter_append_uint(cursor, end, (unsigned long)cents, 2U);
+	cursor = formatter_append_str(cursor, end, "Change: ");
+	cursor = formatter_append_uint(cursor, end, (unsigned long)request->cash_dkk, 1U);
+	cursor = formatter_append_str(cursor, end, " DKK");
 	formatter_finalize(cursor, end);
 	result->line2[0] = '\0';
 }
@@ -178,7 +173,7 @@ static void formatter_write_cash_status(const formatter_request_t *request,
 	cursor = result->line1;
 	end = result->line1 + FORMATTER_TEXT_LENGTH - 1U;
 	cursor = formatter_append_str(cursor, end, "Cash: ");
-	cursor = formatter_append_uint(cursor, end, (unsigned long)request->cash_cents, 1U);
+	cursor = formatter_append_uint(cursor, end, (unsigned long)request->cash_dkk, 1U);
 	cursor = formatter_append_str(cursor, end, " DKK");
 	formatter_finalize(cursor, end);
 	result->line2[0] = '\0';
@@ -192,8 +187,8 @@ static void formatter_write_progress(const formatter_request_t *request,
 	INT32U total_whole;
 	INT32U total_fraction;
 
-	total_whole = request->total_tenths_dkk / 10U;
-	total_fraction = request->total_tenths_dkk % 10U;
+	total_whole = request->total_price_tenths_dkk / 10U;
+	total_fraction = request->total_price_tenths_dkk % 10U;
 	cursor = result->line1;
 	end = result->line1 + FORMATTER_TEXT_LENGTH - 1U;
 	cursor = formatter_append_str(cursor, end, "Amt: ");
@@ -242,9 +237,9 @@ BOOLEAN formatter_format_startup(INT16U espresso_price_dkk,
 	request.latte_price_dkk = latte_price_dkk;
 	request.filter_price_per_cl_dkk = filter_price_per_cl_dkk;
 	request.time_of_day_seconds = time_of_day_seconds;
-	request.cash_cents = 0;
+	request.cash_dkk = 0;
 	request.amount_cl = 0;
-	request.total_tenths_dkk = 0;
+	request.total_price_tenths_dkk = 0;
 	request.card_number = 0;
 
 	formatter_exchange(&request, &result);
@@ -256,7 +251,7 @@ BOOLEAN formatter_format_startup(INT16U espresso_price_dkk,
 	return 1;
 }
 
-BOOLEAN formatter_format_change(INT16U cash_cents, char *line1, char *line2)
+BOOLEAN formatter_format_change(INT16U cash_dkk, char *line1, char *line2)
 {
 	formatter_request_t request;
 	formatter_result_t result;
@@ -269,9 +264,9 @@ BOOLEAN formatter_format_change(INT16U cash_cents, char *line1, char *line2)
 	request.latte_price_dkk = 0;
 	request.filter_price_per_cl_dkk = 0;
 	request.time_of_day_seconds = 0;
-	request.cash_cents = cash_cents;
+	request.cash_dkk = cash_dkk;
 	request.amount_cl = 0;
-	request.total_tenths_dkk = 0;
+	request.total_price_tenths_dkk = 0;
 	request.card_number = 0;
 
 	formatter_exchange(&request, &result);
@@ -283,7 +278,7 @@ BOOLEAN formatter_format_change(INT16U cash_cents, char *line1, char *line2)
 	return 1;
 }
 
-BOOLEAN formatter_format_cash_status(INT16U cash_cents, char *line1, char *line2)
+BOOLEAN formatter_format_cash_status(INT16U cash_dkk, char *line1, char *line2)
 {
 	formatter_request_t request;
 	formatter_result_t result;
@@ -296,9 +291,9 @@ BOOLEAN formatter_format_cash_status(INT16U cash_cents, char *line1, char *line2
 	request.latte_price_dkk = 0;
 	request.filter_price_per_cl_dkk = 0;
 	request.time_of_day_seconds = 0;
-	request.cash_cents = cash_cents;
+	request.cash_dkk = cash_dkk;
 	request.amount_cl = 0;
-	request.total_tenths_dkk = 0;
+	request.total_price_tenths_dkk = 0;
 	request.card_number = 0;
 
 	formatter_exchange(&request, &result);
@@ -312,9 +307,9 @@ BOOLEAN formatter_format_cash_status(INT16U cash_cents, char *line1, char *line2
 
 BOOLEAN formatter_format_progress(INT16U amount_cl,
 								  INT16U unit_price_dkk,
-								  INT32U total_tenths_dkk,
-								  char *line1,
-								  char *line2)
+					  INT32U total_price_tenths_dkk,
+					  char *line1,
+					  char *line2)
 {
 	formatter_request_t request;
 	formatter_result_t result;
@@ -327,9 +322,9 @@ BOOLEAN formatter_format_progress(INT16U amount_cl,
 	request.latte_price_dkk = 0;
 	request.filter_price_per_cl_dkk = unit_price_dkk;
 	request.time_of_day_seconds = 0;
-	request.cash_cents = 0;
+	request.cash_dkk = 0;
 	request.amount_cl = amount_cl;
-	request.total_tenths_dkk = total_tenths_dkk;
+	request.total_price_tenths_dkk = total_price_tenths_dkk;
 	request.card_number = 0;
 
 	formatter_exchange(&request, &result);
@@ -357,9 +352,9 @@ BOOLEAN formatter_format_card_number(INT64U card_number, char *dest, INT16U dest
 	request.latte_price_dkk = 0;
 	request.filter_price_per_cl_dkk = 0;
 	request.time_of_day_seconds = 0;
-	request.cash_cents = 0;
+	request.cash_dkk = 0;
 	request.amount_cl = 0;
-	request.total_tenths_dkk = 0;
+	request.total_price_tenths_dkk = 0;
 	request.card_number = card_number;
 
 	formatter_exchange(&request, &result);

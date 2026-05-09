@@ -34,9 +34,9 @@ typedef struct
 	INT16U latte_price_dkk;
 	INT16U filter_price_per_cl_dkk;
 	INT32U time_of_day_seconds;
-	INT16U cash_cents;
+	INT16U cash_dkk;
 	INT16U amount_cl;
-	INT32U total_tenths_dkk;
+	INT32U total_price_tenths_dkk;
 	INT64U card_number;
 } formatter_request_t;
 
@@ -52,11 +52,11 @@ BOOLEAN formatter_format_startup(INT16U espresso_price_dkk,
 								 INT32U time_of_day_seconds,
 								 char *line1,
 								 char *line2);
-BOOLEAN formatter_format_change(INT16U cash_cents, char *line1, char *line2);
-BOOLEAN formatter_format_cash_status(INT16U cash_cents, char *line1, char *line2);
+BOOLEAN formatter_format_change(INT16U cash_dkk, char *line1, char *line2);
+BOOLEAN formatter_format_cash_status(INT16U cash_dkk, char *line1, char *line2);
 BOOLEAN formatter_format_progress(INT16U amount_cl,
-								  INT16U unit_price_dkk,
-								  INT32U total_tenths_dkk,
+						  INT16U unit_price_dkk,
+						  INT32U total_price_tenths_dkk,
 								  char *line1,
 								  char *line2);
 BOOLEAN formatter_format_card_number(INT64U card_number, char *dest, INT16U dest_len);
