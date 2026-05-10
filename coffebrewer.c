@@ -32,7 +32,7 @@ void waitForTimer(INT8U timerID);
 void displayUpdate(const char *line1, const char *line2);
 BOOLEAN selectConfirm(void);
 
-INT16U brewerState = PRODUCT_SELECT;
+INT16U brewerState = INITIAL_UART_STATE;
 INT16U espresso_price_dkk = DEFAULT_ESPRESSO_PRICE;
 INT16U latte_price_dkk = DEFAULT_LATTE_PRICE;
 INT16U filter_price_per_cl_dkk = DEFAULT_FILTER_COFFEE_PRICE;

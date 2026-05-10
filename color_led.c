@@ -72,10 +72,10 @@ void led_init(void)
   dummy = SYSCTL_RCGC2_R;
 
   // Set the direction as output (PF1, PF2 and PF3).
-  GPIO_PORTF_DIR_R = 0x0E;
+  GPIO_PORTF_DIR_R |= 0x0E;
 
   // Enable the GPIO pins for digital function (PF1, PF2, PF3).
-  GPIO_PORTF_DEN_R = 0x0E;
+  GPIO_PORTF_DEN_R |= 0x0E;
 
   leds_off();
 

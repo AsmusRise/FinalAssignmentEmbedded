@@ -311,7 +311,7 @@ extern BOOLEAN uart0_rx_rdy()
 *   Function : See module specification (.h-file).
 *****************************************************************************/
 {
-  return( UART0_FR_R & UART_FR_RXFF );
+  return( !(UART0_FR_R & UART_FR_RXFE) );
 }
 
 extern INT8U uart0_getc()

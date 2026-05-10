@@ -46,7 +46,7 @@ void buttons_init(void)
     int dummy;
 
     // Enable GPIO port F
-    SYSCTL_RCGC2_R = SYSCTL_RCGC2_GPIOF;
+    SYSCTL_RCGC2_R |= SYSCTL_RCGC2_GPIOF;
     // Dummy read to insert a few cycles after enabling the peripheral
     dummy = SYSCTL_RCGC2_R;
 

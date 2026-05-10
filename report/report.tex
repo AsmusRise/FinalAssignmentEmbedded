@@ -1,0 +1,142 @@
+\documentclass[11pt,a4paper]{article}
+
+% ── Packages ──────────────────────────────────────────────
+\usepackage[margin=2cm]{geometry}
+\usepackage{graphicx}
+\usepackage{listings}
+\usepackage{xcolor}
+\usepackage{hyperref}
+\usepackage{caption}
+\usepackage{subcaption}
+\usepackage{float}
+\usepackage{enumitem}
+\setlist{nosep}
+
+% ── Code listing style ────────────────────────────────────
+\lstset{
+  language=VHDL,
+  basicstyle=\ttfamily\scriptsize,
+  keywordstyle=\color{blue}\bfseries,
+  commentstyle=\color{gray},
+  numbers=left,
+  numberstyle=\tiny\color{gray},
+  frame=single,
+  breaklines=true,
+  captionpos=b,
+}
+
+% ── Title ─────────────────────────────────────────────────
+\title{\textbf{Assignment 3: Interfaces and Memories}\\
+       \large DIG 2026}
+\author{
+  Group X \\[4pt]
+  Name 1 — Student ID \\
+  Name 2 — Student ID \\
+  Name 3 — Student ID
+}
+\date{\today}
+
+% ══════════════════════════════════════════════════════════
+\begin{document}
+\maketitle
+
+% ── 1. Component Description ─────────────────────────────
+\section{Component Description}
+
+% TODO: Describe each VHDL module / component used:
+%  - UART RX (receiver)
+%  - UART TX (transmitter)
+%  - RAM (data buffer between RX and TX on FPGA1)
+%  - Top-level entity for FPGA1 and FPGA2
+%  - Baud-rate generator / clock divider
+%  - (Bonus) SPI master/slave modules
+
+\begin{table}[H]
+\centering
+\caption{System components overview}
+\begin{tabular}{|l|l|p{6cm}|}
+\hline
+\textbf{Component} & \textbf{Location} & \textbf{Role} \\ \hline
+UART RX        & FPGA 1 \& 2 & Receives serial data from PC / other FPGA \\ \hline
+UART TX        & FPGA 1 \& 2 & Transmits serial data to other FPGA / PC  \\ \hline
+RAM            & FPGA 1      & Stores received message before forwarding  \\ \hline
+Baud Generator & FPGA 1 \& 2 & Generates timing for UART at target baud rate \\ \hline
+% Add more rows as needed
+\end{tabular}
+\end{table}
+
+
+% ── 2. Circuit Operation ─────────────────────────────────
+\section{Circuit Operation}
+
+% TODO: Explain the main block design and interactions.
+%       Include a block diagram (place in figures/).
+
+% \begin{figure}[H]
+%   \centering
+%   \includegraphics[width=0.9\textwidth]{figures/block_diagram.png}
+%   \caption{Top-level block diagram of the two-FPGA system.}
+%   \label{fig:block}
+% \end{figure}
+
+
+% ── 3. Data Flow Analysis ────────────────────────────────
+\section{Data Flow Analysis}
+
+The complete data path is:
+
+\begin{center}
+\texttt{PC1 $\rightarrow$ UART1 $\rightarrow$ FPGA\,1\,(RX) $\rightarrow$ RAM $\rightarrow$ FPGA\,1\,(TX) $\rightarrow$ UART1--2 $\rightarrow$ FPGA\,2\,(RX) $\rightarrow$ FPGA\,2\,(TX) $\rightarrow$ UART2 $\rightarrow$ PC2}
+\end{center}
+
+% TODO: Explain each stage in 3–5 sentences.
+
+
+% ── 4. Simulation Results ────────────────────────────────
+\section{Simulation Results}
+
+\subsection{Functional Simulation}
+% TODO: Insert waveform screenshot and explain.
+% \begin{figure}[H]
+%   \centering
+%   \includegraphics[width=0.9\textwidth]{figures/func_sim.png}
+%   \caption{Functional simulation waveform.}
+%   \label{fig:func_sim}
+% \end{figure}
+
+\subsection{Post-Synthesis Simulation}
+% TODO: Insert waveform screenshot and compare with functional.
+% \begin{figure}[H]
+%   \centering
+%   \includegraphics[width=0.9\textwidth]{figures/post_synth_sim.png}
+%   \caption{Post-synthesis simulation waveform.}
+%   \label{fig:post_synth}
+% \end{figure}
+
+\subsection{Implementation Timing Simulation}
+% TODO: Insert waveform screenshot and compare with previous two.
+% \begin{figure}[H]
+%   \centering
+%   \includegraphics[width=0.9\textwidth]{figures/timing_sim.png}
+%   \caption{Implementation timing simulation waveform.}
+%   \label{fig:timing_sim}
+% \end{figure}
+
+\subsection{Comparison}
+% TODO: 3–5 sentences comparing the three simulation types.
+%       - Functional: ideal, no delays
+%       - Post-synthesis: includes gate-level delays
+%       - Timing: includes routing delays — closest to real hardware
+
+
+% ── Bonus: SPI ────────────────────────────────────────────
+% \section*{Bonus: SPI Communication}
+% TODO: If attempted, describe the SPI link replacing UART1–2.
+
+
+% ── Video Demo ────────────────────────────────────────────
+\section*{Video Demonstration}
+% TODO: Insert link
+Video link: \url{https://youtube.com/your-video-link-here}
+
+\end{document}
