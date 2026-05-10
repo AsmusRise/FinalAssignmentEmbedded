@@ -28,6 +28,18 @@
 #define MED_PRIO  2
 #define HIGH_PRIO 3
 
+void vApplicationMallocFailedHook( void )
+{
+    for( ;; );
+}
+
+void vApplicationStackOverflowHook( TaskHandle_t xTask, char *pcTaskName )
+{
+    ( void ) xTask;
+    ( void ) pcTaskName;
+    for( ;; );
+}
+
 static void setupHardware(void)
 /*****************************************************************************
 *   Input    :  -
@@ -81,7 +93,7 @@ int main(void)
     lcd_queue = xQueueCreate(128, sizeof(INT8U));
     uart_tx_queue = xQueueCreate(128, sizeof(INT8U));
     uart_rx_queue = xQueueCreate(128, sizeof(INT8U));
-    transaction_queue = xQueueCreate(1, sizeof(transaction_t));
+    transaction_queue = xQueueCreate(8, sizeof(transaction_t));
     timerCommandQueue = xQueueCreate(8, sizeof(timer_command_t));
 
     //create the mutex
