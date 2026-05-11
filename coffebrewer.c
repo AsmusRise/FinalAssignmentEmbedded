@@ -268,14 +268,10 @@ void coffebrewer_task(void *pvParameters)
             if(startup_config_done == 0)
             {
                 time_of_day_base_seconds = 0;
-                /* debug: before UART startup config */
-                uart0_putc('p');
                 uart0_read_startup_config(&espresso_price_dkk,
                                           &latte_price_dkk,
                                           &filter_price_per_cl_dkk,
                                           &time_of_day_base_seconds);
-                /* debug: after UART startup config */
-                uart0_putc('q');
 
                 time_of_day_base_tick = xTaskGetTickCount();
                 formatter_format_startup(espresso_price_dkk,
@@ -308,8 +304,6 @@ void coffebrewer_task(void *pvParameters)
             keyCounter = 0;
             displayUpdate("Select Product:", "1:Esp 2:Lat 3:FC");
 
-            /* debug: about to wait for product select */
-            uart0_putc('A');
             if(xQueueReceive(key_queue,  &key_buffer, portMAX_DELAY) == pdTRUE)
             {
 
@@ -353,16 +347,13 @@ void coffebrewer_task(void *pvParameters)
                     break;
                 }
             }
-            /* debug: leaving PRODUCT_SELECT */
-            uart0_putc('a');
+
             break;
         case PAYMENT_SELECT:
             //update display
             xQueueReset(key_queue);
             displayUpdate("Select Payment:", "1:Card 2:Cash");
 
-            /* debug: about to wait for payment select */
-            uart0_putc('B');
             if(xQueueReceive(key_queue,  &key_buffer, portMAX_DELAY) == pdTRUE)
             {
 
@@ -392,8 +383,7 @@ void coffebrewer_task(void *pvParameters)
                     break;
                 }
             }
-            /* debug: leaving PAYMENT_SELECT */
-            uart0_putc('b');
+
             break;
         case CARD_ENTRY:
             //update display
@@ -474,17 +464,14 @@ void coffebrewer_task(void *pvParameters)
                     break;
                 }
             }
-            /* debug: leaving CARD_ENTRY */
-            uart0_putc('c');
+
             break;
         case PINCODE:
             //update display
             xQueueReset(key_queue);
-                displayUpdate("Enter PIN Code:", "#: Done, *: Clr");
+            displayUpdate("Enter PIN Code:", "#: Done, *: Clr");
 
 
-            /* debug: about to wait for pincode */
-            uart0_putc('D');
             if(xQueueReceive(key_queue,  &key_buffer, portMAX_DELAY) == pdTRUE)
             {
                 switch (key_buffer)
@@ -505,7 +492,7 @@ void coffebrewer_task(void *pvParameters)
                     {
                         //max pincode length reached run logic to check if correct....
                         //accept code if both are odd or both are even else reject.
-                        sum = keylist[0] + cardNumber % 10;
+                        sum = keylist[3] + cardNumber % 10;
                         if(sum % 2 == 0)
                         {
                             //update display with success
@@ -538,8 +525,7 @@ void coffebrewer_task(void *pvParameters)
                     break;
                 }
             }
-            /* debug: leaving PINCODE */
-            uart0_putc('d');
+
             break;
         case CASH_ENTRY:
         {
@@ -608,7 +594,6 @@ void coffebrewer_task(void *pvParameters)
                     
                 } else if(key_buffer == '*') //cancel payment and return change
                 {
-                    uart0_putc('A');  // Mark: asterisk pressed
                     give_change();
                     brewerState = PRODUCT_SELECT;
                     cashInserted = 0;
@@ -631,7 +616,6 @@ void coffebrewer_task(void *pvParameters)
             //clear queue and display only once
             if(cup_display_shown == 0)
             {
-                uart0_putc('E');  /* debug: entering CUP_PRESENCE */
                 xQueueReset(button_queue1);
                 displayUpdate("Place cup", "Press Button 1");
                 cup_display_shown = 1;
@@ -652,7 +636,6 @@ void coffebrewer_task(void *pvParameters)
             //clear queue and display only once
             if(brew_display_shown == 0)
             {
-                uart0_putc('F');  /* debug: entering READY_TO_BREW */
                 xQueueReset(button_queue2);
                 displayUpdate("Ready to brew?", "Press Button 2");
                 brew_display_shown = 1;
@@ -983,14 +966,11 @@ void coffebrewer_task(void *pvParameters)
             }
             
             //wait for signal from "cup sensor" (aka button input) that cup has been taken
-            /* debug: waiting for take cup */
-            uart0_putc('G');
             if(xQueueReceive(button_queue1, &key_buffer, portMAX_DELAY) == pdTRUE){ //just check if its been clicked
                 brewerState = PRODUCT_SELECT; //back to start for next customer
                 transaction_logged = 0;
             }
-            /* debug: leaving TAKE_CUP */
-            uart0_putc('g');
+
             break;
 
         default:
