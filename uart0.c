@@ -54,7 +54,7 @@ static BOOLEAN uart_read_line(char *dst, INT16U dst_len)
 
   while(1)
   {
-    if(xQueueReceive(uart_rx_queue, &ch, 10000 / portTICK_RATE_MS) != pdTRUE)
+    if(xQueueReceive(uart_rx_queue, &ch, 1000 / portTICK_RATE_MS) != pdTRUE)
     {
       return 0;
     }
@@ -167,10 +167,12 @@ void uart0_read_startup_config(INT16U *espresso_price,
   xQueueReset(uart_rx_queue);
 
   uart0_puts_selfmade((INT8U*)"Startup setup over UART");
-  uart0_puts_selfmade((INT8U*)"Send value + Enter, or just Enter for default");
-  uart0_puts_selfmade((INT8U*)"");
+  uart0_puts_selfmade((INT8U*)"Send 4 lines, each ended by CR:");
+  uart0_puts_selfmade((INT8U*)"1) Espresso price DKK (empty=15)");
+  uart0_puts_selfmade((INT8U*)"2) Latte price DKK (empty=27)");
+  uart0_puts_selfmade((INT8U*)"3) Filter price DKK/cl (empty=3)");
+  uart0_puts_selfmade((INT8U*)"4) Time HH:MM:SS (empty=00:00:00)");
 
-  uart0_puts_selfmade((INT8U*)"1) Espresso price DKK (empty=15):");
   if(uart_read_line(rx_line, sizeof(rx_line)) == 1)
   {
     if(parse_uint16_from_line(rx_line, &parsed_price, &has_value) == 1 && has_value == 1 && espresso_price != NULL)
@@ -179,7 +181,6 @@ void uart0_read_startup_config(INT16U *espresso_price,
     }
   }
 
-  uart0_puts_selfmade((INT8U*)"2) Latte price DKK (empty=27):");
   if(uart_read_line(rx_line, sizeof(rx_line)) == 1)
   {
     if(parse_uint16_from_line(rx_line, &parsed_price, &has_value) == 1 && has_value == 1 && latte_price != NULL)
@@ -188,7 +189,6 @@ void uart0_read_startup_config(INT16U *espresso_price,
     }
   }
 
-  uart0_puts_selfmade((INT8U*)"3) Filter price DKK/cl (empty=3):");
   if(uart_read_line(rx_line, sizeof(rx_line)) == 1)
   {
     if(parse_uint16_from_line(rx_line, &parsed_price, &has_value) == 1 && has_value == 1 && filter_price != NULL)
@@ -197,7 +197,6 @@ void uart0_read_startup_config(INT16U *espresso_price,
     }
   }
 
-  uart0_puts_selfmade((INT8U*)"4) Time HH:MM:SS (empty=00:00:00):");
   if(uart_read_line(rx_line, sizeof(rx_line)) == 1)
   {
     if(parse_hms_from_line(rx_line, &parsed_time_seconds, &has_value) == 1 && has_value == 1)

@@ -1,12 +1,1 @@
-# CCS build output
-Debug/
-Release/
-
-# CCS / Theia IDE files
-.clangd
-.theia/
-.settings/
-
-# OS junk
-.DS_Store
-Thumbs.db
+/.metadata/
