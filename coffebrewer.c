@@ -390,8 +390,6 @@ void coffebrewer_task(void *pvParameters)
             xQueueReset(key_queue);
             displayUpdate("Enter", "Card Number:");
 
-            /* debug: about to wait for card entry */
-            uart0_putc('C');
             if(xQueueReceive(key_queue,  &key_buffer, portMAX_DELAY) == pdTRUE)
             {
                 switch (key_buffer)
